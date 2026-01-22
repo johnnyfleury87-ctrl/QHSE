@@ -40,8 +40,8 @@ export default function ProfilPage() {
         description="Le mode production nécessite une configuration Supabase."
       />
       <Alert variant="info">
-        Cette fonctionnalité n'est disponible qu'en mode production avec Supabase configuré.
-        Utilisez le mode démo pour découvrir l'application.
+        Cette fonctionnalité n&apos;est disponible qu&apos;en mode production avec Supabase configuré.
+        Utilisez le mode démo pour découvrir l&apos;application.
       </Alert>
     </AppShell>
   )

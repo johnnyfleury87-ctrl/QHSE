@@ -142,7 +142,7 @@ export const getDemoUsersList = () => {
   }));
 };
 
-export default {
+const demoAuth = {
   login: demoLogin,
   logout: demoLogout,
   getSession: getDemoSession,

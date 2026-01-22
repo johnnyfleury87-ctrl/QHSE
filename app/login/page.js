@@ -43,7 +43,7 @@ export default function LoginPage() {
     e.preventDefault()
     
     if (!supabase) {
-      setError('Supabase non configuré. Utilisez le mode démo.')
+      setError("Supabase non configuré. Utilisez le mode démo.")
       return
     }
 
@@ -65,11 +65,11 @@ export default function LoginPage() {
       console.error('Login error:', err)
       
       if (err.message.includes('désactivé')) {
-        setError('Votre compte est désactivé. Contactez un administrateur.')
+        setError("Votre compte est désactivé. Contactez un administrateur.")
       } else if (err.message.includes('Invalid login credentials')) {
-        setError('Email ou mot de passe incorrect.')
+        setError("Email ou mot de passe incorrect.")
       } else {
-        setError('Une erreur est survenue lors de la connexion.')
+        setError("Une erreur est survenue lors de la connexion.")
       }
     } finally {
       setLoading(false)
@@ -157,7 +157,7 @@ export default function LoginPage() {
         {/* Info Démo */}
         <Alert variant="info" className="mt-6">
           <p className="text-sm">
-            <strong>Mode démo disponible :</strong> Découvrez l'application sans créer de compte
+            <strong>Mode démo disponible :</strong> Découvrez l&apos;application sans créer de compte
             en utilisant le mode démo avec des données exemples.
           </p>
         </Alert>

@@ -73,7 +73,7 @@ export default function HomePage() {
         </div>
 
         <p className="text-sm text-muted-foreground">
-          Le mode démo vous permet d'explorer l'application sans créer de compte
+          Le mode démo vous permet d&apos;explorer l&apos;application sans créer de compte
         </p>
       </div>
 
@@ -113,7 +113,7 @@ export default function HomePage() {
               </li>
               <li className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
-                Templates d'audit personnalisables
+                Templates d&apos;audit personnalisables
               </li>
               <li className="flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-primary" />
