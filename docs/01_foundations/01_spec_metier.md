@@ -19,7 +19,7 @@ Mettre en place les fondations du système:
 - Récupération mot de passe (optionnel étape 01, peut être reporté)
 
 ### 2. Utilisateurs et rôles
-- Table `users` (extends auth.users Supabase)
+- Table `profiles` (extends auth.users (relation 1:1 via profiles) Supabase)
 - 5 rôles métier: admin_dev, qhse_manager, qh_auditor, safety_auditor, viewer
 - Profil utilisateur (nom, prénom, email, rôle, statut actif/inactif)
 
@@ -142,7 +142,7 @@ Mettre en place les fondations du système:
 ### Parcours 4: admin_dev gère utilisateurs
 1. Login admin_dev
 2. Accéder section "Utilisateurs"
-3. Voir liste users (email, nom, rôle, statut)
+3. Voir liste profiles (email, nom, rôle, statut)
 4. Cliquer "Inviter utilisateur"
 5. Remplir formulaire:
    - Email: auditeur@example.com
@@ -214,7 +214,7 @@ Optionnel pour étape 01, peut être ajouté en migration initiale:
 
 ### CT1-01: Auth Supabase
 - Utiliser auth.users table native Supabase
-- Étendre avec table public.users (id = auth.uid())
+- Étendre avec table public.profiles (id = auth.uid())
 - RLS basée sur auth.uid()
 
 ### CT1-02: Soft delete vs Hard delete
@@ -228,7 +228,7 @@ Optionnel pour étape 01, peut être ajouté en migration initiale:
 
 ## Livrables attendus
 
-1. **02_schema_db.md**: Tables users, depots, zones avec relations, contraintes
+1. **02_schema_db.md**: Tables profiles, depots, zones avec relations, contraintes
 2. **03_rls_policies.md**: Policies RLS par table et par rôle
 3. **04_tests_validation.md**: Scénarios test CRUD + RLS
 4. **05_exemples_ui.md**: Wireframes pages Dépôts, Zones, Users
