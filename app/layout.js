@@ -10,7 +10,11 @@ import { ThemeProvider } from '@/components/providers/theme-provider'
 export const metadata = {
   title: 'QHSE - Gestion des audits et non-conformités',
   description: 'Application de gestion QHSE: audits, templates, non-conformités, rapports',
-  viewport: 'width=device-width, initial-scale=1',
+}
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({ children }) {
