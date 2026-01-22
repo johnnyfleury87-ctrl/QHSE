@@ -1,0 +1,15 @@
+/**
+ * jsconfig.json - Configuration chemins absolus
+ * Permet imports via @/components, @/lib, etc.
+ */
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@/components/*": ["./components/*"],
+      "@/lib/*": ["./lib/*"],
+      "@/app/*": ["./app/*"]
+    }
+  }
+}
