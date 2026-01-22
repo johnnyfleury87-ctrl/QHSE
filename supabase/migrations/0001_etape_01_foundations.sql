@@ -11,28 +11,43 @@
 -- =====================================================================
 
 -- Type: Rôles utilisateurs QHSE
-CREATE TYPE role_type AS ENUM (
-  'admin_dev',        -- Administrateur technique (droits complets)
-  'qhse_manager',     -- Manager QHSE (gestion globale, validation NC)
-  'qh_auditor',       -- Auditeur qualité/hygiène
-  'safety_auditor',   -- Auditeur sécurité
-  'viewer'            -- Consultation uniquement
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'role_type') THEN
+    CREATE TYPE role_type AS ENUM (
+      'admin_dev',        -- Administrateur technique (droits complets)
+      'qhse_manager',     -- Manager QHSE (gestion globale, validation NC)
+      'qh_auditor',       -- Auditeur qualité/hygiène
+      'safety_auditor',   -- Auditeur sécurité
+      'viewer'            -- Consultation uniquement
+    );
+  END IF;
+END $$;
 
 -- Type: Types de zones dans un dépôt
-CREATE TYPE zone_type AS ENUM (
-  'warehouse',       -- Entrepôt/stockage
-  'loading',         -- Quai de chargement
-  'office',          -- Bureau
-  'production',      -- Zone de production
-  'cold_storage'     -- Chambre froide
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'zone_type') THEN
+    CREATE TYPE zone_type AS ENUM (
+      'warehouse',       -- Entrepôt/stockage
+      'loading',         -- Quai de chargement
+      'office',          -- Bureau
+      'production',      -- Zone de production
+      'cold_storage'     -- Chambre froide
+    );
+  END IF;
+END $$;
 
 -- Type: Statut actif/inactif (soft delete)
-CREATE TYPE status AS ENUM (
-  'active',          -- Actif
-  'inactive'         -- Inactif (désactivé)
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'status') THEN
+    CREATE TYPE status AS ENUM (
+      'active',          -- Actif
+      'inactive'         -- Inactif (désactivé)
+    );
+  END IF;
+END $$;
 
 -- =====================================================================
 -- 2. FONCTIONS HELPER (utilisées par triggers)
@@ -60,7 +75,7 @@ $$ LANGUAGE plpgsql;
 -- 3. TABLE: profiles
 -- =====================================================================
 
-CREATE TABLE profiles (
+CREATE TABLE IF NOT EXISTS profiles (
   -- Clé primaire (= auth.users.id)
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   
@@ -86,9 +101,9 @@ CREATE TABLE profiles (
 );
 
 -- Index sur profiles
-CREATE INDEX idx_profiles_email ON profiles(email);
-CREATE INDEX idx_profiles_role ON profiles(role);
-CREATE INDEX idx_profiles_status ON profiles(status);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON profiles(email);
+CREATE INDEX IF NOT EXISTS idx_profiles_role ON profiles(role);
+CREATE INDEX IF NOT EXISTS idx_profiles_status ON profiles(status);
 
 -- Trigger: Auto-update updated_at
 CREATE TRIGGER set_updated_at_profiles
@@ -100,7 +115,7 @@ CREATE TRIGGER set_updated_at_profiles
 -- 4. TABLE: depots
 -- =====================================================================
 
-CREATE TABLE depots (
+CREATE TABLE IF NOT EXISTS depots (
   -- Clé primaire
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -132,9 +147,9 @@ CREATE TABLE depots (
 );
 
 -- Index sur depots
-CREATE UNIQUE INDEX idx_depots_code_upper ON depots(UPPER(code));
-CREATE INDEX idx_depots_city ON depots(city);
-CREATE INDEX idx_depots_status ON depots(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_depots_code_upper ON depots(UPPER(code));
+CREATE INDEX IF NOT EXISTS idx_depots_city ON depots(city);
+CREATE INDEX IF NOT EXISTS idx_depots_status ON depots(status);
 
 -- Triggers sur depots
 CREATE TRIGGER uppercase_depot_code
@@ -151,7 +166,7 @@ CREATE TRIGGER set_updated_at_depots
 -- 5. TABLE: zones
 -- =====================================================================
 
-CREATE TABLE zones (
+CREATE TABLE IF NOT EXISTS zones (
   -- Clé primaire
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -179,9 +194,9 @@ CREATE TABLE zones (
 );
 
 -- Index sur zones
-CREATE INDEX idx_zones_depot_id ON zones(depot_id);
-CREATE INDEX idx_zones_type ON zones(type);
-CREATE INDEX idx_zones_status ON zones(status);
+CREATE INDEX IF NOT EXISTS idx_zones_depot_id ON zones(depot_id);
+CREATE INDEX IF NOT EXISTS idx_zones_type ON zones(type);
+CREATE INDEX IF NOT EXISTS idx_zones_status ON zones(status);
 
 -- Trigger: Auto-update updated_at
 CREATE TRIGGER set_updated_at_zones
@@ -201,6 +216,12 @@ BEGIN
   SELECT role INTO user_role
   FROM profiles
   WHERE id = auth.uid();
+  
+  -- Validation stricte
+  IF user_role IS NULL THEN
+    RAISE EXCEPTION 'Profil utilisateur inexistant ou incomplet (user_id: %)', auth.uid()
+      USING ERRCODE = 'insufficient_privilege';
+  END IF;
   
   RETURN user_role;
 END;

@@ -27,11 +27,6 @@
 -- ================================================================
 
 -- ================================================================
--- TRANSACTION (Rollback automatique si erreur)
--- ================================================================
-BEGIN;
-
--- ================================================================
 -- SECTION 1: MÉTADONNÉES MIGRATION
 -- ================================================================
 DO $$
@@ -68,15 +63,15 @@ END $$;
 -- SECTION 3: INDEXES PERFORMANCE (Dashboard)
 -- ================================================================
 
--- Index composite: audits (statut + completed_at)
+-- Index composite: audits (statut + date_realisee)
 -- Usage: KPI-03 (audits terminés période), CHART-03 (historique)
--- Performance: WHERE statut = 'completed' AND completed_at >= ...
-CREATE INDEX IF NOT EXISTS idx_audits_status_completed_at
-ON audits(statut, completed_at)
-WHERE statut = 'completed';
+-- Performance: WHERE statut = 'termine' AND date_realisee >= ...
+CREATE INDEX IF NOT EXISTS idx_audits_status_date_realisee
+ON audits(statut, date_realisee)
+WHERE statut = 'termine' AND date_realisee IS NOT NULL;
 
-COMMENT ON INDEX idx_audits_status_completed_at IS
-'Index composite dashboard: audits.statut + completed_at. Performance KPI-03 (audits terminés période), CHART-03 (historique 6 mois). Étape 04.';
+COMMENT ON INDEX idx_audits_status_date_realisee IS
+'Index composite dashboard: audits.statut + date_realisee. Performance KPI-03 (audits terminés période), CHART-03 (historique 6 mois). Étape 04.';
 
 -- Index composite: non_conformites (gravite + created_at)
 -- Usage: CHART-02 (NC par gravité période)
@@ -97,7 +92,10 @@ ON reponses(audit_id, question_id);
 COMMENT ON INDEX idx_reponses_audit_question IS
 'Index composite dashboard: reponses.audit_id + question_id. Performance calcul taux conformité KPI-04 (JOIN audits+reponses+questions). Étape 04.';
 
-RAISE NOTICE '✓ Indexes performance créés (3 indexes)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Indexes performance créés (3 indexes)';
+END $$;
 
 -- ================================================================
 -- SECTION 4: FONCTIONS CALCUL KPIs
@@ -124,8 +122,9 @@ BEGIN
   RETURN (
     SELECT COUNT(*)
     FROM audits
-    WHERE statut = 'completed'
-      AND completed_at >= NOW() - INTERVAL '1 day' * period_days
+    WHERE statut = 'termine'
+      AND date_realisee >= CURRENT_DATE - period_days
+      AND date_realisee IS NOT NULL
   );
 END;
 $$;
@@ -158,23 +157,16 @@ DECLARE
   total_responses INT;
   conforme_responses INT;
 BEGIN
-  -- Compter réponses conformes selon type question
+  -- Compter réponses conformes (utilise colonne est_conforme déjà présente)
   SELECT 
-    COUNT(*) FILTER (
-      WHERE 
-        (q.question_type = 'yes_no' AND r.valeur->>'answer' = 'yes')
-        OR (q.question_type = 'ok_nok_na' AND r.valeur->>'answer' = 'ok')
-        OR (q.question_type = 'score_1_5' AND (r.valeur->>'score')::INT >= 3)
-    ),
-    COUNT(*) FILTER (
-      WHERE q.question_type IN ('yes_no', 'ok_nok_na', 'score_1_5')
-    )
+    COUNT(*) FILTER (WHERE r.est_conforme = true),
+    COUNT(*)
   INTO conforme_responses, total_responses
   FROM reponses r
   JOIN audits a ON r.audit_id = a.id
-  JOIN questions q ON r.question_id = q.id
-  WHERE a.completed_at >= NOW() - INTERVAL '1 day' * period_days
-    AND a.statut = 'completed';
+  WHERE a.date_realisee >= CURRENT_DATE - period_days
+    AND a.statut = 'termine'
+    AND a.date_realisee IS NOT NULL;
 
   -- Éviter division par zéro
   IF total_responses = 0 THEN
@@ -189,7 +181,10 @@ $$;
 COMMENT ON FUNCTION calculate_conformity_rate(INT) IS
 'Calcule taux conformité global (%) sur période. Logique: yes/ok/score>=3 = conforme, text ignoré. SECURITY INVOKER: respecte RLS (auditeurs: taux personnel, admin/manager: taux global). Usage: KPI-04 Dashboard.';
 
-RAISE NOTICE '✓ Fonctions KPIs créées (2 fonctions)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Fonctions KPIs créées (2 fonctions)';
+END $$;
 
 -- ================================================================
 -- SECTION 5: FONCTIONS CHARTS (Retour JSON)
@@ -224,17 +219,17 @@ BEGIN
         'statut', statut,
         'count', count,
         'label', CASE statut
-          WHEN 'assigned' THEN 'À faire'
-          WHEN 'in_progress' THEN 'En cours'
-          WHEN 'completed' THEN 'Terminés'
-          WHEN 'archived' THEN 'Archivés'
+          WHEN 'planifie' THEN 'Planifié'
+          WHEN 'en_cours' THEN 'En cours'
+          WHEN 'termine' THEN 'Terminé'
+          WHEN 'annule' THEN 'Annulé'
         END
       ) ORDER BY 
         CASE statut
-          WHEN 'assigned' THEN 1
-          WHEN 'in_progress' THEN 2
-          WHEN 'completed' THEN 3
-          WHEN 'archived' THEN 4
+          WHEN 'planifie' THEN 1
+          WHEN 'en_cours' THEN 2
+          WHEN 'termine' THEN 3
+          WHEN 'annule' THEN 4
         END
     )
     FROM (
@@ -340,13 +335,14 @@ BEGIN
     )
     FROM (
       SELECT 
-        TO_CHAR(completed_at, 'Mon YYYY') as mois,
-        DATE_TRUNC('month', completed_at) as date,
+        TO_CHAR(date_realisee, 'Mon YYYY') as mois,
+        DATE_TRUNC('month', date_realisee::TIMESTAMPTZ) as date,
         COUNT(*) as count
       FROM audits
       WHERE 
-        statut = 'completed'
-        AND completed_at >= NOW() - INTERVAL '6 months'
+        statut = 'termine'
+        AND date_realisee >= CURRENT_DATE - INTERVAL '6 months'
+        AND date_realisee IS NOT NULL
       GROUP BY mois, date
       ORDER BY date
     ) sub
@@ -404,22 +400,16 @@ BEGIN
         d.code as depot_code,
         d.name as depot_name,
         ROUND(
-          (COUNT(*) FILTER (
-            WHERE 
-              (q.question_type = 'yes_no' AND r.valeur->>'answer' = 'yes')
-              OR (q.question_type = 'ok_nok_na' AND r.valeur->>'answer' = 'ok')
-              OR (q.question_type = 'score_1_5' AND (r.valeur->>'score')::INT >= 3)
-          )::NUMERIC / NULLIF(COUNT(*), 0)) * 100,
+          (COUNT(*) FILTER (WHERE r.est_conforme = true)::NUMERIC / NULLIF(COUNT(*), 0)) * 100,
           1
         ) as taux
       FROM depots d
       JOIN audits a ON a.depot_id = d.id
       JOIN reponses r ON r.audit_id = a.id
-      JOIN questions q ON q.id = r.question_id
       WHERE 
-        a.statut = 'completed'
-        AND a.completed_at >= NOW() - INTERVAL '1 day' * period_days
-        AND q.question_type IN ('yes_no', 'ok_nok_na', 'score_1_5')
+        a.statut = 'termine'
+        AND a.date_realisee >= CURRENT_DATE - period_days
+        AND a.date_realisee IS NOT NULL
       GROUP BY d.id, d.code, d.name
       HAVING COUNT(*) > 0  -- Exclure dépôts sans réponses
       ORDER BY taux DESC
@@ -497,7 +487,10 @@ $$;
 COMMENT ON FUNCTION get_top5_zones_critical_nc(INT) IS
 'Retourne top 5 zones avec plus de NC critiques (JSON). SECURITY DEFINER avec CONTRÔLE RÔLE: admin_dev/qhse_manager uniquement (RAISE EXCEPTION sinon). Vue globale organisation (bypass RLS). Usage: CHART-05 Dashboard.';
 
-RAISE NOTICE '✓ Fonctions charts créées (5 fonctions)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Fonctions charts créées (5 fonctions)';
+END $$;
 
 -- ================================================================
 -- SECTION 6: GRANTS (Permissions Fonctions)
@@ -516,9 +509,12 @@ GRANT EXECUTE ON FUNCTION get_audits_history_6months() TO authenticated;
 GRANT EXECUTE ON FUNCTION get_top5_depots_conformity(INT) TO authenticated;
 GRANT EXECUTE ON FUNCTION get_top5_zones_critical_nc(INT) TO authenticated;
 
-RAISE NOTICE '✓ Permissions fonctions accordées';
-RAISE NOTICE '  - 5 fonctions SECURITY INVOKER (RLS): tous rôles';
-RAISE NOTICE '  - 2 fonctions Top5 (contrôle rôle interne): admin/manager uniquement';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Permissions fonctions accordées';
+  RAISE NOTICE '  - 5 fonctions SECURITY INVOKER (RLS): tous rôles';
+  RAISE NOTICE '  - 2 fonctions Top5 (contrôle rôle interne): admin/manager uniquement';
+END $$;
 
 -- ================================================================
 -- SECTION 7: VALIDATIONS POST-MIGRATION
@@ -537,7 +533,7 @@ BEGIN
   SELECT COUNT(*) INTO index_count
   FROM pg_indexes
   WHERE indexname IN (
-    'idx_audits_status_completed_at',
+    'idx_audits_status_date_realisee',
     'idx_nc_gravity_created_at',
     'idx_reponses_audit_question'
   );
@@ -610,14 +606,8 @@ BEGIN
 END $$;
 
 -- ================================================================
--- SECTION 9: COMMIT TRANSACTION
+-- FIN MIGRATION ÉTAPE 04
 -- ================================================================
-
--- ⚠️ COMMIT: Applique définitivement la migration
--- Si erreur survenue: ROLLBACK automatique
-COMMIT;
-
--- Message final
 DO $$
 BEGIN
   RAISE NOTICE '========================================';
@@ -657,13 +647,16 @@ DROP FUNCTION IF EXISTS get_top5_depots_conformity(INT) CASCADE;
 DROP FUNCTION IF EXISTS get_top5_zones_critical_nc(INT) CASCADE;
 
 -- Supprimer indexes
-DROP INDEX IF EXISTS idx_audits_status_completed_at;
+DROP INDEX IF EXISTS idx_audits_status_date_realisee;
 DROP INDEX IF EXISTS idx_nc_gravity_created_at;
 DROP INDEX IF EXISTS idx_reponses_audit_question;
 
-COMMIT;
+-- COMMIT supprimé (Supabase gère transactions automatiquement)
 
-RAISE NOTICE 'Rollback Étape 04 terminé';
+DO $$
+BEGIN
+  RAISE NOTICE 'Rollback Étape 04 terminé';
+END $$;
 */
 
 -- ================================================================

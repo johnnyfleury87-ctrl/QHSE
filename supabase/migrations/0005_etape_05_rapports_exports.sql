@@ -16,8 +16,6 @@
 -- STATUT: ✅ PRÊTE - NON EXÉCUTÉE (attente validation humaine)
 -- ============================================================================
 
-BEGIN;
-
 -- ============================================================================
 -- SECTION 1: MÉTADONNÉES MIGRATION
 -- ============================================================================
@@ -76,7 +74,7 @@ END $$;
 -- Objectif: Stocker modèles rapports versionés (structure sections, config)
 -- Volumétrie: ~20 templates (croissance lente)
 -- ============================================================================
-CREATE TABLE rapport_templates (
+CREATE TABLE IF NOT EXISTS rapport_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Identification
@@ -110,7 +108,7 @@ COMMENT ON COLUMN rapport_templates.structure_json IS 'Configuration JSON: secti
 -- Objectif: Métadonnées tous rapports générés (audit PDF/MD, exports Excel)
 -- Volumétrie: ~670 rapports/an, 3350/5 ans, 2.45 GB Storage/7 ans
 -- ============================================================================
-CREATE TABLE rapports_generes (
+CREATE TABLE IF NOT EXISTS rapports_generes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Identification unique (RG-02)
@@ -171,7 +169,7 @@ COMMENT ON COLUMN rapports_generes.storage_path IS 'Chemin relatif fichier Supab
 -- Objectif: Historique consultations rapports (audit trail RG-06)
 -- Volumétrie: ~5000 consultations/an, 25k/5 ans, 1 MB/an
 -- ============================================================================
-CREATE TABLE rapport_consultations (
+CREATE TABLE IF NOT EXISTS rapport_consultations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- Relations
@@ -192,32 +190,38 @@ CREATE TABLE rapport_consultations (
 COMMENT ON TABLE rapport_consultations IS 'Historique consultations rapports - traçabilité audit trail (RG-06)';
 COMMENT ON COLUMN rapport_consultations.action_type IS 'Type action: view (affichage), download (téléchargement), regenerate (regénération)';
 
-RAISE NOTICE '✓ Tables créées (3 tables)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Tables créées (3 tables)';
+END $$;
 
 -- ============================================================================
 -- SECTION 4: INDEXES PERFORMANCE
 -- ============================================================================
 
 -- Indexes rapport_templates
-CREATE INDEX idx_templates_type_active ON rapport_templates(type, active);
-CREATE INDEX idx_templates_created_at ON rapport_templates(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_templates_type_active ON rapport_templates(type, active);
+CREATE INDEX IF NOT EXISTS idx_templates_created_at ON rapport_templates(created_at DESC);
 
 -- Indexes rapports_generes
-CREATE UNIQUE INDEX idx_rapports_code ON rapports_generes(code_rapport);
-CREATE INDEX idx_rapports_type_statut ON rapports_generes(type_rapport, statut);
-CREATE INDEX idx_rapports_audit_type_version ON rapports_generes(audit_id, type_rapport, version DESC) WHERE audit_id IS NOT NULL;
-CREATE INDEX idx_rapports_generated_by ON rapports_generes(generated_by);
-CREATE INDEX idx_rapports_generated_at ON rapports_generes(generated_at DESC);
-CREATE INDEX idx_rapports_statut_disponible ON rapports_generes(statut) WHERE statut = 'disponible';
-CREATE INDEX idx_rapports_archivage ON rapports_generes(generated_at) WHERE statut != 'archive';
-CREATE INDEX idx_rapports_filters_gin ON rapports_generes USING gin(filters_json);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rapports_code ON rapports_generes(code_rapport);
+CREATE INDEX IF NOT EXISTS idx_rapports_type_statut ON rapports_generes(type_rapport, statut);
+CREATE INDEX IF NOT EXISTS idx_rapports_audit_type_version ON rapports_generes(audit_id, type_rapport, version DESC) WHERE audit_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_rapports_generated_by ON rapports_generes(generated_by);
+CREATE INDEX IF NOT EXISTS idx_rapports_generated_at ON rapports_generes(generated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_rapports_statut_disponible ON rapports_generes(statut) WHERE statut = 'disponible';
+CREATE INDEX IF NOT EXISTS idx_rapports_archivage ON rapports_generes(generated_at) WHERE statut != 'archive';
+CREATE INDEX IF NOT EXISTS idx_rapports_filters_gin ON rapports_generes USING gin(filters_json);
 
 -- Indexes rapport_consultations
-CREATE INDEX idx_consultations_rapport ON rapport_consultations(rapport_id, consulted_at DESC);
-CREATE INDEX idx_consultations_user ON rapport_consultations(user_id, consulted_at DESC);
-CREATE INDEX idx_consultations_date ON rapport_consultations(consulted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_consultations_rapport ON rapport_consultations(rapport_id, consulted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_consultations_user ON rapport_consultations(user_id, consulted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_consultations_date ON rapport_consultations(consulted_at DESC);
 
-RAISE NOTICE '✓ Indexes créés (15 indexes)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Indexes créés (15 indexes)';
+END $$;
 
 -- ============================================================================
 -- SECTION 5: SÉQUENCE + FONCTION GÉNÉRATION CODE RAPPORT
@@ -256,7 +260,10 @@ $$;
 
 COMMENT ON FUNCTION generate_rapport_code() IS 'Génère code rapport unique format RAPyyyymm-NNNN (RG-02 Étape 05)';
 
-RAISE NOTICE '✓ Séquence + fonction code rapport créées';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Séquence + fonction code rapport créées';
+END $$;
 
 -- ============================================================================
 -- SECTION 6: TRIGGERS
@@ -329,7 +336,10 @@ BEFORE UPDATE ON rapports_generes
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
 
-RAISE NOTICE '✓ Triggers créés (5 triggers: 2 métier + 3 updated_at)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Triggers créés (5 triggers: 2 métier + 3 updated_at)';
+END $$;
 
 -- ============================================================================
 -- SECTION 7: FONCTION HELPER RLS
@@ -343,15 +353,15 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-    current_role TEXT;
+    v_user_role TEXT;
     rapport_audit_id UUID;
     rapport_type TEXT;
     rapport_generated_by UUID;
 BEGIN
-    current_role := get_current_user_role();
+    v_user_role := get_current_user_role();
     
     -- Admin et Manager: accès total
-    IF current_role IN ('admin_dev', 'qhse_manager') THEN
+    IF v_user_role IN ('admin_dev', 'qhse_manager') THEN
         RETURN TRUE;
     END IF;
     
@@ -388,7 +398,10 @@ GRANT EXECUTE ON FUNCTION can_access_rapport TO authenticated;
 
 COMMENT ON FUNCTION can_access_rapport IS 'Vérifie accès rapport selon type + rôle + audit lié (helper RLS Étape 05)';
 
-RAISE NOTICE '✓ Fonction helper RLS créée';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Fonction helper RLS créée';
+END $$;
 
 -- ============================================================================
 -- SECTION 8: FONCTIONS MÉTIER
@@ -506,7 +519,10 @@ GRANT EXECUTE ON FUNCTION archive_old_reports TO authenticated;
 
 COMMENT ON FUNCTION archive_old_reports IS 'Archive rapports > 7 ans (RG-09 conformité QHSE Suisse), exécution annuelle (pg_cron ou manuel)';
 
-RAISE NOTICE '✓ Fonctions métier créées (3 fonctions)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Fonctions métier créées (3 fonctions)';
+END $$;
 
 -- ============================================================================
 -- SECTION 9: ACTIVATION RLS
@@ -516,7 +532,10 @@ ALTER TABLE rapport_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rapports_generes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE rapport_consultations ENABLE ROW LEVEL SECURITY;
 
-RAISE NOTICE '✓ RLS activé sur 3 tables';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ RLS activé sur 3 tables';
+END $$;
 
 -- ============================================================================
 -- SECTION 10: POLICIES RLS - rapport_templates (4 policies)
@@ -559,7 +578,10 @@ USING (
     get_current_user_role() = 'admin_dev'
 );
 
-RAISE NOTICE '✓ Policies RLS rapport_templates créées (4 policies)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Policies RLS rapport_templates créées (4 policies)';
+END $$;
 
 -- ============================================================================
 -- SECTION 11: POLICIES RLS - rapports_generes (5 policies)
@@ -588,7 +610,7 @@ USING (
         AND EXISTS (
             SELECT 1 FROM audits
             WHERE audits.id = rapports_generes.audit_id
-              AND audits.statut = 'completed'
+            AND audits.statut = 'termine'
         )
     )
 );
@@ -632,7 +654,10 @@ USING (
     get_current_user_role() = 'admin_dev'
 );
 
-RAISE NOTICE '✓ Policies RLS rapports_generes créées (4 policies)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Policies RLS rapports_generes créées (4 policies)';
+END $$;
 
 -- ============================================================================
 -- SECTION 12: POLICIES RLS - rapport_consultations (4 policies)
@@ -679,7 +704,10 @@ USING (
     get_current_user_role() = 'admin_dev'
 );
 
-RAISE NOTICE '✓ Policies RLS rapport_consultations créées (4 policies)';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Policies RLS rapport_consultations créées (4 policies)';
+END $$;
 
 -- ============================================================================
 -- SECTION 13: GRANTS PERMISSIONS
@@ -698,7 +726,10 @@ GRANT UPDATE, DELETE ON rapport_consultations TO authenticated;
 -- Séquence
 GRANT USAGE ON SEQUENCE rapport_code_seq TO authenticated;
 
-RAISE NOTICE '✓ Permissions GRANT accordées';
+DO $$
+BEGIN
+  RAISE NOTICE '✓ Permissions GRANT accordées';
+END $$;
 
 -- ============================================================================
 -- SECTION 14: VALIDATIONS POST-MIGRATION
@@ -777,10 +808,8 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- COMMIT TRANSACTION
+-- FIN VALIDATIONS (Supabase gère les transactions automatiquement)
 -- ============================================================================
-
-COMMIT;
 
 -- Message final
 DO $$
@@ -797,7 +826,7 @@ BEGIN
   RAISE NOTICE '========================================';
   RAISE NOTICE 'IMPORTANT: Créer bucket Supabase Storage "reports"';
   RAISE NOTICE 'IMPORTANT: Configurer RLS policies Storage bucket';
-  RAISE NOTICE 'IMPORTANT: Tester génération rapport audit completed';
+  RAISE NOTICE 'IMPORTANT: Tester génération rapport audit terminé';
   RAISE NOTICE 'IMPORTANT: Planifier archive_old_reports() (pg_cron annuel)';
   RAISE NOTICE '========================================';
 END $$;
@@ -840,7 +869,7 @@ VOLUMÉTRIE ESTIMÉE (voir spec métier):
 
 TESTS POST-MIGRATION OBLIGATOIRES:
 - Test RLS-01: Auditeur voit uniquement rapports propres audits
-- Test RLS-02: Viewer voit uniquement rapports audits completed
+- Test RLS-02: Viewer voit uniquement rapports audits terminés
 - Test RG-01: Génération rapport audit in_progress → erreur
 - Test RG-02: Code rapport unique format RAPyyyymm-NNNN
 - Test RG-04: Regénération audit 123 → v2 créée, v1 conservée

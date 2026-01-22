@@ -12,58 +12,93 @@
 -- =====================================================================
 
 -- Type: Gravité NC
-CREATE TYPE nc_gravite AS ENUM (
-  'faible',    -- 90 jours échéance
-  'moyenne',   -- 30 jours échéance
-  'haute',     -- 7 jours échéance
-  'critique'   -- 24h échéance
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'nc_gravite') THEN
+    CREATE TYPE nc_gravite AS ENUM (
+      'faible',    -- 90 jours échéance
+      'moyenne',   -- 30 jours échéance
+      'haute',     -- 7 jours échéance
+      'critique'   -- 24h échéance
+    );
+  END IF;
+END $$;
 
 -- Type: Statut lifecycle NC
-CREATE TYPE nc_statut AS ENUM (
-  'ouverte',       -- Créée, en attente assignation
-  'en_traitement', -- Assignée, correction en cours
-  'resolue',       -- Correction effectuée, attente vérification
-  'verifiee',      -- Vérifiée par manager, attente clôture
-  'cloturee'       -- Archivée définitivement
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'nc_statut') THEN
+    CREATE TYPE nc_statut AS ENUM (
+      'ouverte',       -- Créée, en attente assignation
+      'en_traitement', -- Assignée, correction en cours
+      'resolue',       -- Correction effectuée, attente vérification
+      'verifiee',      -- Vérifiée par manager, attente clôture
+      'cloturee'       -- Archivée définitivement
+    );
+  END IF;
+END $$;
 
 -- Type: Classification NC
-CREATE TYPE nc_type AS ENUM (
-  'securite',
-  'qualite',
-  'hygiene',
-  'environnement',
-  'autre'
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'nc_type') THEN
+    CREATE TYPE nc_type AS ENUM (
+      'securite',
+      'qualite',
+      'hygiene',
+      'environnement',
+      'autre'
+    );
+  END IF;
+END $$;
 
 -- Type: Nature action
-CREATE TYPE action_type AS ENUM (
-  'corrective',  -- Corrige NC existante
-  'preventive'   -- Empêche récurrence
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'action_type') THEN
+    CREATE TYPE action_type AS ENUM (
+      'corrective',  -- Corrige NC existante
+      'preventive'   -- Empêche récurrence
+    );
+  END IF;
+END $$;
 
 -- Type: Statut action
-CREATE TYPE action_statut AS ENUM (
-  'a_faire',   -- Créée, non démarrée
-  'en_cours',  -- En cours exécution
-  'terminee',  -- Terminée, attente vérification
-  'verifiee'   -- Validée par manager
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'action_statut') THEN
+    CREATE TYPE action_statut AS ENUM (
+      'a_faire',   -- Créée, non démarrée
+      'en_cours',  -- En cours exécution
+      'terminee',  -- Terminée, attente vérification
+      'verifiee'   -- Validée par manager
+    );
+  END IF;
+END $$;
 
 -- Type: Type preuve
-CREATE TYPE preuve_type AS ENUM (
-  'photo',
-  'document',
-  'commentaire'
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'preuve_type') THEN
+    CREATE TYPE preuve_type AS ENUM (
+      'photo',
+      'document',
+      'commentaire'
+    );
+  END IF;
+END $$;
 
 -- Type: Type notification
-CREATE TYPE notification_type AS ENUM (
-  'nc_critique',      -- NC gravité critique créée (RG-05)
-  'nc_echue',         -- NC échue non résolue (RG-10)
-  'action_terminee'   -- Action complétée
-);
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'notification_type') THEN
+    CREATE TYPE notification_type AS ENUM (
+      'nc_critique',      -- NC gravité critique créée (RG-05)
+      'nc_echue',         -- NC échue non résolue (RG-10)
+      'action_terminee'   -- Action complétée
+    );
+  END IF;
+END $$;
 
 -- =====================================================================
 -- 2. SÉQUENCE CODES ACTIONS
@@ -168,7 +203,7 @@ SET search_path = public;
 -- 4. TABLE: non_conformites
 -- =====================================================================
 
-CREATE TABLE non_conformites (
+CREATE TABLE IF NOT EXISTS non_conformites (
   -- Identifiants
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code VARCHAR(15) NOT NULL UNIQUE,
@@ -200,13 +235,8 @@ CREATE TABLE non_conformites (
   verified_at TIMESTAMPTZ,
   closed_at TIMESTAMPTZ,
   
-  -- Flags calculés
-  is_overdue BOOLEAN GENERATED ALWAYS AS (
-    CASE 
-      WHEN statut IN ('ouverte', 'en_traitement') AND due_date < CURRENT_DATE THEN true
-      ELSE false
-    END
-  ) STORED,
+  -- Flags calculés (is_overdue retiré car CURRENT_DATE non-immutable)
+  -- Note: is_overdue sera calculé en temps réel via VIEW ou fonction
   
   -- Soft delete
   is_archived BOOLEAN DEFAULT false,
@@ -267,17 +297,17 @@ CREATE TABLE non_conformites (
 );
 
 -- Index sur non_conformites
-CREATE INDEX idx_nc_statut ON non_conformites(statut);
-CREATE INDEX idx_nc_gravite ON non_conformites(gravite);
-CREATE INDEX idx_nc_assigned_to ON non_conformites(assigned_to);
-CREATE INDEX idx_nc_created_by ON non_conformites(created_by);
-CREATE INDEX idx_nc_audit ON non_conformites(audit_id);
-CREATE INDEX idx_nc_depot ON non_conformites(depot_id);
-CREATE INDEX idx_nc_zone ON non_conformites(zone_id);
-CREATE INDEX idx_nc_due_date ON non_conformites(due_date);
-CREATE INDEX idx_nc_is_overdue ON non_conformites(is_overdue) WHERE is_overdue = true;
-CREATE INDEX idx_nc_type ON non_conformites(type);
-CREATE INDEX idx_nc_code ON non_conformites(code);
+CREATE INDEX IF NOT EXISTS idx_nc_statut ON non_conformites(statut);
+CREATE INDEX IF NOT EXISTS idx_nc_gravite ON non_conformites(gravite);
+CREATE INDEX IF NOT EXISTS idx_nc_assigned_to ON non_conformites(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_nc_created_by ON non_conformites(created_by);
+CREATE INDEX IF NOT EXISTS idx_nc_audit ON non_conformites(audit_id);
+CREATE INDEX IF NOT EXISTS idx_nc_depot ON non_conformites(depot_id);
+CREATE INDEX IF NOT EXISTS idx_nc_zone ON non_conformites(zone_id);
+CREATE INDEX IF NOT EXISTS idx_nc_due_date ON non_conformites(due_date);
+-- Index is_overdue supprimé (colonne GENERATED non-immutable retirée)
+CREATE INDEX IF NOT EXISTS idx_nc_type ON non_conformites(type);
+CREATE INDEX IF NOT EXISTS idx_nc_code ON non_conformites(code);
 
 -- Triggers sur non_conformites
 CREATE TRIGGER set_updated_at_non_conformites
@@ -294,7 +324,7 @@ CREATE TRIGGER uppercase_nc_code
 -- 5. TABLE: actions_correctives
 -- =====================================================================
 
-CREATE TABLE actions_correctives (
+CREATE TABLE IF NOT EXISTS actions_correctives (
   -- Identifiants
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code VARCHAR(20) NOT NULL UNIQUE,
@@ -347,13 +377,13 @@ CREATE TABLE actions_correctives (
 );
 
 -- Index sur actions_correctives
-CREATE INDEX idx_action_nc ON actions_correctives(nc_id);
-CREATE INDEX idx_action_statut ON actions_correctives(statut);
-CREATE INDEX idx_action_assigned_to ON actions_correctives(assigned_to);
-CREATE INDEX idx_action_created_by ON actions_correctives(created_by);
-CREATE INDEX idx_action_due_date ON actions_correctives(due_date);
-CREATE INDEX idx_action_type ON actions_correctives(type);
-CREATE INDEX idx_action_code ON actions_correctives(code);
+CREATE INDEX IF NOT EXISTS idx_action_nc ON actions_correctives(nc_id);
+CREATE INDEX IF NOT EXISTS idx_action_statut ON actions_correctives(statut);
+CREATE INDEX IF NOT EXISTS idx_action_assigned_to ON actions_correctives(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_action_created_by ON actions_correctives(created_by);
+CREATE INDEX IF NOT EXISTS idx_action_due_date ON actions_correctives(due_date);
+CREATE INDEX IF NOT EXISTS idx_action_type ON actions_correctives(type);
+CREATE INDEX IF NOT EXISTS idx_action_code ON actions_correctives(code);
 
 -- Triggers sur actions_correctives
 CREATE TRIGGER set_updated_at_actions
@@ -370,7 +400,7 @@ CREATE TRIGGER uppercase_action_code
 -- 6. TABLE: preuves_correction
 -- =====================================================================
 
-CREATE TABLE preuves_correction (
+CREATE TABLE IF NOT EXISTS preuves_correction (
   -- Identifiants
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -410,16 +440,16 @@ CREATE TABLE preuves_correction (
 );
 
 -- Index sur preuves_correction
-CREATE INDEX idx_preuve_action ON preuves_correction(action_id);
-CREATE INDEX idx_preuve_uploaded_by ON preuves_correction(uploaded_by);
-CREATE INDEX idx_preuve_verified_by ON preuves_correction(verified_by);
-CREATE INDEX idx_preuve_type ON preuves_correction(type);
+CREATE INDEX IF NOT EXISTS idx_preuve_action ON preuves_correction(action_id);
+CREATE INDEX IF NOT EXISTS idx_preuve_uploaded_by ON preuves_correction(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_preuve_verified_by ON preuves_correction(verified_by);
+CREATE INDEX IF NOT EXISTS idx_preuve_type ON preuves_correction(type);
 
 -- =====================================================================
 -- 7. TABLE: notifications
 -- =====================================================================
 
-CREATE TABLE notifications (
+CREATE TABLE IF NOT EXISTS notifications (
   -- Identifiants
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -455,12 +485,12 @@ CREATE TABLE notifications (
 );
 
 -- Index sur notifications
-CREATE INDEX idx_notification_destinataire ON notifications(destinataire_id);
-CREATE INDEX idx_notification_lue ON notifications(lue);
-CREATE INDEX idx_notification_type ON notifications(type);
-CREATE INDEX idx_notification_nc ON notifications(nc_id);
-CREATE INDEX idx_notification_action ON notifications(action_id);
-CREATE INDEX idx_notification_created ON notifications(created_at);
+CREATE INDEX IF NOT EXISTS idx_notification_destinataire ON notifications(destinataire_id);
+CREATE INDEX IF NOT EXISTS idx_notification_lue ON notifications(lue);
+CREATE INDEX IF NOT EXISTS idx_notification_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notification_nc ON notifications(nc_id);
+CREATE INDEX IF NOT EXISTS idx_notification_action ON notifications(action_id);
+CREATE INDEX IF NOT EXISTS idx_notification_created ON notifications(created_at);
 
 -- =====================================================================
 -- 8. TRIGGERS MÉTIER
