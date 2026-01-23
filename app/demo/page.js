@@ -27,7 +27,8 @@ import {
   CheckCircle2, 
   TrendingUp,
   AlertTriangle,
-  Calendar
+  Calendar,
+  Building2
 } from 'lucide-react'
 import mockApi from '@/src/data/mockData'
 
@@ -218,6 +219,12 @@ export default function DemoPage() {
                 <Button variant="outline">
                   <AlertCircle className="h-4 w-4 mr-2" />
                   Voir les non-conformités
+                </Button>
+              </Link>
+              <Link href="/depots">
+                <Button variant="outline">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  Voir les dépôts
                 </Button>
               </Link>
               <Link href="/">
