@@ -63,25 +63,35 @@ async function verifyJETCAdmin(request) {
     .eq('id', user.id)
     .single()
 
-  console.log('🔐 API /api/admin/users/[id] - Profil:', {
+  // 🔍 LOG DIAGNOSTIQUE: Voir profil brut AVANT validation
+  console.log('🔍 API /api/admin/users/[id] - PROFIL RAW:', {
+    profile: profile,
+    profileError: profileError,
     hasProfile: !!profile,
     profileStatus: profile?.status,
-    isJetcAdmin: profile?.is_jetc_admin,
-    profileError: profileError?.message
+    isJetcAdmin: profile?.is_jetc_admin
   })
 
-  // Vérification 1: profil existe
-  if (profileError || !profile) {
+  // ❗ Vérification 1: profil existe (409 SEULEMENT si vraiment absent)
+  if (!profile) {
+    console.error('❌ API [id]: Profil ABSENT pour user', user.id)
     return { error: 'Profil non initialisé - Contactez un administrateur', status: 409 }
   }
 
-  // Vérification 2: statut actif
+  // Si profileError mais profile existe, log warning mais continue
+  if (profileError) {
+    console.warn('⚠️ API [id]: profileError mais profil existe:', profileError.message)
+  }
+
+  // ✅ Vérification 2: statut actif
   if (profile.status !== 'active') {
+    console.error('❌ API [id]: Compte désactivé:', profile.email, 'status=', profile.status)
     return { error: 'Compte désactivé - Contactez un administrateur', status: 403 }
   }
 
-  // Vérification 3: flag JETC admin
+  // ✅ Vérification 3: flag JETC admin
   if (profile.is_jetc_admin !== true) {
+    console.error('❌ API [id]: Pas JETC admin:', profile.email, 'is_jetc_admin=', profile.is_jetc_admin)
     return { error: 'Accès refusé: réservé aux administrateurs JETC Solution', status: 403 }
   }
 
