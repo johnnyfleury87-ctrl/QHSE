@@ -294,15 +294,15 @@ export default function AuditDetailPage({ params }) {
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-wrap gap-3">
-              <Link href={`/audits/${auditId}/realiser`}>
+              <Link href={`/audits/${auditId}/questions`}>
                 <Button variant="primary">
                   <ClipboardCheck className="h-4 w-4 mr-2" />
-                  Voir les questions ({totalQuestions})
+                  Réaliser l&apos;audit ({totalQuestions} questions)
                 </Button>
               </Link>
 
               {audit.status === 'termine' && (
-                <Link href={`/audits/${auditId}/rapport`}>
+                <Link href={`/audits/${auditId}/report`}>
                   <Button variant="outline">
                     <FileText className="h-4 w-4 mr-2" />
                     Voir le rapport
