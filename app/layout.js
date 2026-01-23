@@ -8,6 +8,10 @@ import './globals.css'
 import { ThemeProvider } from '@/components/providers/theme-provider'
 import { AuthProvider } from '@/lib/auth-context'
 import { DemoBanner } from '@/components/ui/demo-banner'
+import { logEnvDiagnostic } from '@/lib/env-diagnostic'
+
+// Log diagnostic au boot (server-side)
+logEnvDiagnostic('root-layout-server')
 
 export const metadata = {
   title: 'QHSE - Gestion des audits et non-conformités',

@@ -15,6 +15,8 @@
  * - Storage Supabase
  */
 
+import { logEnvDiagnostic } from '@/lib/env-diagnostic';
+
 export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 export const APP_CONFIG = {
@@ -30,7 +32,9 @@ export const APP_CONFIG = {
   },
 };
 
-// Log du mode au chargement (dev uniquement)
-if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-  console.log(`[QHSE Config] Mode: ${DEMO_MODE ? 'DÉMO' : 'PRODUCTION'}`);
+// Log du mode au chargement
+if (typeof window !== 'undefined') {
+  logEnvDiagnostic('demoConfig-client');
+} else {
+  logEnvDiagnostic('demoConfig-server');
 }

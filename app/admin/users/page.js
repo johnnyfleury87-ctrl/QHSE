@@ -94,9 +94,13 @@ export default function AdminUsersPage() {
       }
 
       // Appeler l'API pour récupérer les utilisateurs
+      console.log('🔍 Fetch /api/admin/users avec credentials...')
       const response = await fetch('/api/admin/users', {
+        method: 'GET',
+        credentials: 'include', // ⚠️ CRITICAL: Envoie les cookies Supabase
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
         },
       })
 
@@ -154,6 +158,7 @@ export default function AdminUsersPage() {
 
       const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
@@ -381,6 +386,7 @@ function CreateUserModal({ onClose, onSuccess }) {
       // Appeler l'API
       const response = await fetch('/api/admin/users', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
