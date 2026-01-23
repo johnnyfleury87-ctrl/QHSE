@@ -35,6 +35,7 @@ import {
   MessageSquare
 } from 'lucide-react'
 import api from '@/src/lib/apiWrapper'
+import { evaluateRule, getSeverityColor, getSeverityIcon } from '@/src/lib/rulesEngine'
 
 export default function AuditQuestionsPage({ params }) {
   const router = useRouter()
@@ -45,6 +46,7 @@ export default function AuditQuestionsPage({ params }) {
   const [questions, setQuestions] = useState([])
   const [categories, setCategories] = useState([])
   const [answers, setAnswers] = useState({}) // { questionId: { value, comment } }
+  const [ruleResults, setRuleResults] = useState({}) // { questionId: { severity, message } }
   const [progress, setProgress] = useState({ answered_count: 0, question_count: 0, percentage: 0 })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -133,6 +135,9 @@ export default function AuditQuestionsPage({ params }) {
       setSaving(true)
       setError(null)
       
+      // Trouver la question pour évaluation règles
+      const question = questions.find(q => q.id === questionId)
+      
       // Sauvegarder via API
       await api.answers.upsert({
         audit_id: auditId,
@@ -147,12 +152,44 @@ export default function AuditQuestionsPage({ params }) {
         [questionId]: { value, comment }
       }))
 
+      // Évaluer règles métier
+      if (question) {
+        const ruleResult = evaluateRule(question, value)
+        
+        // Stocker résultat évaluation
+        setRuleResults(prev => ({
+          ...prev,
+          [questionId]: {
+            severity: ruleResult.severity,
+            message: ruleResult.message
+          }
+        }))
+
+        // Auto-créer NC si nécessaire
+        if (ruleResult.shouldCreateNC && ruleResult.ncPayload) {
+          try {
+            await api.nonConformities.createFromRule({
+              ...ruleResult.ncPayload,
+              auditId,
+              questionId,
+            })
+            setSuccessMessage('Réponse enregistrée - NC créée automatiquement')
+          } catch (ncErr) {
+            console.error('Erreur création NC:', ncErr)
+            setSuccessMessage('Réponse enregistrée (erreur création NC)')
+          }
+        } else {
+          setSuccessMessage(ruleResult.message || 'Réponse enregistrée')
+        }
+      } else {
+        setSuccessMessage('Réponse enregistrée')
+      }
+
       // Recalculer progress
       const newProgress = await api.answers.getProgress(auditId)
       setProgress(newProgress)
 
-      setSuccessMessage('Réponse enregistrée')
-      setTimeout(() => setSuccessMessage(null), 2000)
+      setTimeout(() => setSuccessMessage(null), 3000)
 
     } catch (err) {
       console.error('Erreur sauvegarde réponse:', err)
@@ -460,6 +497,7 @@ export default function AuditQuestionsPage({ params }) {
                   <CardContent className="space-y-6">
                     {category.questions?.map((question, qIndex) => {
                       const isAnswered = !!answers[question.id]?.value
+                      const ruleResult = ruleResults[question.id]
                       return (
                         <div key={question.id} className="space-y-3 pb-6 border-b last:border-0 last:pb-0">
                           <div className="flex items-start justify-between gap-4">
@@ -480,6 +518,14 @@ export default function AuditQuestionsPage({ params }) {
                             </div>
                           </div>
                           {renderQuestionInput(question)}
+                          
+                          {/* Indicateur sévérité après évaluation règle */}
+                          {ruleResult && ruleResult.message && (
+                            <div className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm ${getSeverityColor(ruleResult.severity)}`}>
+                              <span>{getSeverityIcon(ruleResult.severity)}</span>
+                              <span>{ruleResult.message}</span>
+                            </div>
+                          )}
                         </div>
                       )
                     })}
