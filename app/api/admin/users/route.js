@@ -140,13 +140,36 @@ export async function GET(request) {
   try {
     console.log('🚀 API GET /api/admin/users - DÉBUT')
     
+    // 🔍 A) DIAGNOSTIC COOKIES
+    const { cookies } = await import('next/headers')
+    const cookieStore = cookies()
+    const allCookies = cookieStore.getAll()
+    const cookieNames = allCookies.map(c => c.name)
+    const hasAccessToken = cookieNames.some(name => name.includes('access') || name.includes('auth'))
+    const hasRefreshToken = cookieNames.some(name => name.includes('refresh'))
+    
+    console.log('🍪 DIAGNOSTIC COOKIES:', {
+      totalCookies: cookieNames.length,
+      cookieNames: cookieNames,
+      hasAccessToken,
+      hasRefreshToken,
+      envCheck: {
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+      }
+    })
+    
     // 1. Créer client Supabase avec cookies (session serveur)
     const supabase = createSupabaseServerClient()
     
     // 2. Récupérer la session utilisateur depuis les cookies
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
     console.log('🔐 API GET /api/admin/users - Session:', {
+      hasSession: !!sessionData?.session,
+      sessionError: sessionError?.message,
       hasUser: !!user,
       userId: user?.id,
       userEmail: user?.email,
@@ -155,7 +178,14 @@ export async function GET(request) {
     
     if (authError || !user) {
       console.error('❌ Pas de session valide')
-      return Response.json({ error: 'Non authentifié' }, { status: 401 })
+      return Response.json({ 
+        error: 'Non authentifié',
+        debug: {
+          hasSession: !!sessionData?.session,
+          cookiesCount: cookieNames.length,
+          hasTokens: hasAccessToken && hasRefreshToken
+        }
+      }, { status: 401 })
     }
 
     // 3. Vérifier le profil de l'utilisateur connecté
