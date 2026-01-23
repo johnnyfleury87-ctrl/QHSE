@@ -229,11 +229,3 @@ export function Header() {
     </header>
   )
 }
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
-    </header>
-  )
-}
