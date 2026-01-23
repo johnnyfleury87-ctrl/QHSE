@@ -22,11 +22,13 @@ import Badge from '@/components/ui/badge';
 import { LoadingState, EmptyState, ErrorState } from '@/components/ui/loading-states';
 import { BarChart3, TrendingUp, AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useAuth } from '@/lib/auth-context';
 import mockApi from '@/src/data/mockData';
-import { mockDepots } from '@/src/data/mockData';
+import { supabase } from '@/lib/supabase-client';
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { isDemo } = useAuth();
   
   // États
   const [loading, setLoading] = useState(true);
@@ -43,6 +45,18 @@ export default function DashboardPage() {
   const [periodFilter, setPeriodFilter] = useState(30); // 30 jours par défaut
   const [depotFilter, setDepotFilter] = useState(null);
   const [depots, setDepots] = useState([]);
+
+  // 🔍 LOG DIAGNOSTIQUE
+  useEffect(() => {
+    console.log('📊 DASHBOARD render:', {
+      isDemo,
+      loading,
+      hasError: !!error,
+      auditsCompleted,
+      conformityRate,
+      hasStats: !!auditsByStatus
+    });
+  }, [isDemo, loading, error, auditsCompleted, conformityRate, auditsByStatus]);
 
   // Couleurs Design System (tokens HSL)
   const CHART_COLORS = {
@@ -63,38 +77,71 @@ export default function DashboardPage() {
       setLoading(true);
       setError(null);
 
-      // Charger dépôts pour filtre
-      const depotsData = await mockApi.getDepots();
-      setDepots(depotsData);
+      console.log('📊 DASHBOARD: loadDashboardData, isDemo=', isDemo);
 
-      // Charger KPIs
-      const [
-        completed,
-        rate,
-        statusData,
-        gravityData,
-        historyData,
-      ] = await Promise.all([
-        mockApi.dashboard.getAuditsCompleted(periodFilter),
-        mockApi.dashboard.calculateConformityRate(periodFilter),
-        mockApi.dashboard.getAuditsByStatus(depotFilter, null, periodFilter),
-        mockApi.dashboard.getNCByGravity(depotFilter, periodFilter),
-        mockApi.dashboard.getAuditsHistory6Months(),
-      ]);
+      // ✅ MODE DEMO: utiliser mockApi
+      if (isDemo) {
+        console.log('📊 DASHBOARD: Mode DEMO → mockApi');
+        
+        const depotsData = await mockApi.getDepots();
+        setDepots(depotsData);
 
-      setAuditsCompleted(completed);
-      setConformityRate(rate);
-      setAuditsByStatus(statusData);
-      setNCByGravity(gravityData);
-      setAuditsHistory(historyData);
+        const [
+          completed,
+          rate,
+          statusData,
+          gravityData,
+          historyData,
+        ] = await Promise.all([
+          mockApi.dashboard.getAuditsCompleted(periodFilter),
+          mockApi.dashboard.calculateConformityRate(periodFilter),
+          mockApi.dashboard.getAuditsByStatus(depotFilter, null, periodFilter),
+          mockApi.dashboard.getNCByGravity(depotFilter, periodFilter),
+          mockApi.dashboard.getAuditsHistory6Months(),
+        ]);
+
+        setAuditsCompleted(completed);
+        setConformityRate(rate);
+        setAuditsByStatus(statusData);
+        setNCByGravity(gravityData);
+        setAuditsHistory(historyData);
+
+        return;
+      }
+
+      // ✅ MODE PROD: utiliser Supabase (ou valeurs vides si pas implémenté)
+      console.log('📊 DASHBOARD: Mode PROD → Supabase');
+
+      if (!supabase) {
+        throw new Error('Supabase non configuré');
+      }
+
+      // Charger dépôts depuis Supabase
+      const { data: depotsData, error: depotsError } = await supabase
+        .from('depots')
+        .select('*')
+        .eq('status', 'active');
+
+      if (depotsError) throw depotsError;
+      setDepots(depotsData || []);
+
+      // TODO: Implémenter les fonctions SQL dashboard
+      // Pour l'instant, retourner 0 partout (état vide correct)
+      console.log('📊 DASHBOARD: Fonctions SQL dashboard pas encore implémentées → valeurs 0');
+      
+      setAuditsCompleted(0);
+      setConformityRate(0);
+      setAuditsByStatus({ planifie: 0, en_cours: 0, termine: 0, annule: 0 });
+      setNCByGravity({ critique: 0, haute: 0, moyenne: 0, faible: 0 });
+      setAuditsHistory([]);
 
     } catch (err) {
-      console.error('Erreur chargement dashboard:', err);
+      console.error('❌ DASHBOARD: Erreur chargement:', err);
       setError(err.message || 'Erreur lors du chargement du dashboard');
     } finally {
       setLoading(false);
     }
-  }, [periodFilter, depotFilter]);
+  }, [isDemo, periodFilter, depotFilter]);
 
   useEffect(() => {
     loadDashboardData();
