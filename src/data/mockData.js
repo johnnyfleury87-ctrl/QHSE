@@ -105,25 +105,32 @@ export const mockZones = [
 
 // ============================================
 // 4. TEMPLATES (2 templates: security, quality)
+// SQL: audit_templates (code, titre, domaine, version, statut, createur_id)
 // ============================================
 export const mockTemplates = [
   {
     id: 'template-security-001',
-    name: 'Audit Sécurité Standard',
-    type: 'security',
-    version: 'v1',
+    code: 'AUD-SEC-01',
+    titre: 'Audit Sécurité Standard',
+    domaine: 'securite',
+    version: 1,
+    statut: 'actif',
     description: 'Template pour audits sécurité (EPI, formations, signalisation)',
-    status: 'active',
+    createurId: 'user-manager-001',
     createdAt: '2026-01-08T00:00:00Z',
+    updatedAt: '2026-01-08T00:00:00Z',
   },
   {
     id: 'template-quality-001',
-    name: 'Audit Qualité HACCP',
-    type: 'quality',
-    version: 'v1',
+    code: 'AUD-QUAL-01',
+    titre: 'Audit Qualité HACCP',
+    domaine: 'qualite',
+    version: 1,
+    statut: 'actif',
     description: 'Template pour audits qualité et hygiène alimentaire',
-    status: 'active',
+    createurId: 'user-manager-001',
     createdAt: '2026-01-08T00:00:00Z',
+    updatedAt: '2026-01-08T00:00:00Z',
   },
 ];
 
@@ -568,6 +575,52 @@ const mockApi = {
   // Templates
   getTemplates: () => Promise.resolve(mockTemplates),
   getTemplateById: (id) => Promise.resolve(mockTemplates.find(t => t.id === id)),
+  createTemplate: (templateData) => {
+    // Validation UNIQUE code
+    const existingTemplate = mockTemplates.find(t => t.code === templateData.code);
+    if (existingTemplate) {
+      return Promise.reject(new Error('Un template avec ce code existe déjà'));
+    }
+
+    const newTemplate = {
+      id: `template-${String(mockTemplates.length + 1).padStart(3, '0')}`,
+      ...templateData,
+      version: 1, // Version initiale
+      createurId: 'user-manager-001', // Simule auth.uid()
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    mockTemplates.push(newTemplate);
+    return Promise.resolve(newTemplate);
+  },
+  updateTemplate: (id, templateData) => {
+    const index = mockTemplates.findIndex(t => t.id === id);
+    if (index === -1) {
+      return Promise.reject(new Error('Template introuvable'));
+    }
+
+    // Validation UNIQUE code (si modifié)
+    if (templateData.code && templateData.code !== mockTemplates[index].code) {
+      const existingTemplate = mockTemplates.find(t => t.code === templateData.code && t.id !== id);
+      if (existingTemplate) {
+        return Promise.reject(new Error('Un template avec ce code existe déjà'));
+      }
+    }
+
+    // Auto-incrémenter version si passage à "actif"
+    let newVersion = mockTemplates[index].version;
+    if (templateData.statut === 'actif' && mockTemplates[index].statut === 'brouillon') {
+      newVersion = mockTemplates[index].version + 1;
+    }
+
+    mockTemplates[index] = {
+      ...mockTemplates[index],
+      ...templateData,
+      version: newVersion,
+      updatedAt: new Date().toISOString(),
+    };
+    return Promise.resolve(mockTemplates[index]);
+  },
   
   // Questions
   getQuestionsByTemplate: (templateId) => Promise.resolve(mockQuestions.filter(q => q.templateId === templateId)),

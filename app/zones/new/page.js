@@ -8,7 +8,7 @@
  */
 
 import { Suspense } from 'react'
-import PageHeader from '@/components/layout/page-header'
+import { PageHeader } from '@/components/layout/page-header'
 import ZoneForm from '@/components/zones/zone-form'
 import { LoadingState } from '@/components/ui/loading-states'
 

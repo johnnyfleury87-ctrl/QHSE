@@ -11,7 +11,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import PageHeader from '@/components/layout/page-header'
+import { PageHeader } from '@/components/layout/page-header'
 import ZoneForm from '@/components/zones/zone-form'
 import { LoadingState } from '@/components/ui/loading-states'
 import { Alert } from '@/components/ui/alert'
@@ -85,7 +85,7 @@ export default function EditZonePage() {
           <AlertCircle className="h-4 w-4" />
           <div>
             <p className="font-medium">Zone non trouvée</p>
-            <p className="text-sm">La zone demandée n'existe pas ou a été supprimée.</p>
+            <p className="text-sm">La zone demandée n&apos;existe pas ou a été supprimée.</p>
           </div>
         </Alert>
       </div>
