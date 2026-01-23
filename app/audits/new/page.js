@@ -163,7 +163,7 @@ export default function NewAuditPage() {
       today.setHours(0, 0, 0, 0)
       
       if (selectedDate < today) {
-        newErrors.datePrevue = 'La date prévue doit être dans le futur ou aujourd\'hui'
+        newErrors.datePrevue = 'La date prévue doit être dans le futur ou aujourd&apos;hui'
       }
     }
 
@@ -344,7 +344,7 @@ export default function NewAuditPage() {
           <form onSubmit={handleSubmit}>
             <Card>
               <CardHeader>
-                <CardTitle>Informations de l'audit</CardTitle>
+                <CardTitle>Informations de l&apos;audit</CardTitle>
                 <CardDescription>
                   Tous les champs sont obligatoires
                 </CardDescription>
@@ -354,7 +354,7 @@ export default function NewAuditPage() {
                 {/* Template */}
                 <div className="space-y-2">
                   <label htmlFor="templateId" className="text-sm font-medium">
-                    Template d'audit *
+                    Template d&apos;audit *
                   </label>
                   <select
                     id="templateId"

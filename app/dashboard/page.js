@@ -10,14 +10,14 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import AppShell from '@/components/layout/app-shell';
-import DemoBanner from '@/components/ui/demo-banner';
-import PageHeader from '@/components/layout/page-header';
-import Card from '@/components/ui/card';
-import Button from '@/components/ui/button';
+import { AppShell } from '@/components/layout/app-shell';
+import { DemoBanner } from '@/components/ui/demo-banner';
+import { PageHeader } from '@/components/layout/page-header';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import Badge from '@/components/ui/badge';
 import { LoadingState, EmptyState, ErrorState } from '@/components/ui/loading-states';
 import { BarChart3, TrendingUp, AlertTriangle, CheckCircle, Clock, XCircle } from 'lucide-react';
@@ -57,12 +57,8 @@ export default function DashboardPage() {
     primary: 'hsl(217, 91%, 60%)', // Bleu
   };
 
-  // Chargement données
-  useEffect(() => {
-    loadDashboardData();
-  }, [periodFilter, depotFilter]);
-
-  const loadDashboardData = async () => {
+  // Chargement données avec useCallback pour éviter warning dépendances
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -98,7 +94,11 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [periodFilter, depotFilter]);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, [loadDashboardData]);
 
   // Calculs dérivés
   const totalAudits = auditsByStatus 
