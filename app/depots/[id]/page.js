@@ -181,12 +181,12 @@ export default function DepotDetailPage({ params }) {
                   Retour à la liste
                 </Button>
               </Link>
-              {/* Bouton modification (visible uniquement avec droits admin/manager) */}
-              {/* <Link href={`/depots/${depotId}/edit`}>
+              {/* Bouton modification (visible en mode démo, admin/manager en prod) */}
+              <Link href={`/depots/${depotId}/edit`}>
                 <Button variant="primary">
                   Modifier
                 </Button>
-              </Link> */}
+              </Link>
             </div>
           </PageHeader>
 

@@ -150,13 +150,13 @@ function DepotsContent() {
                   Retour au dashboard
                 </Button>
               </Link>
-              {/* Bouton création (visible uniquement en mode prod avec droits admin/manager) */}
-              {/* <Link href="/depots/new">
+              {/* Bouton création (visible en mode démo, admin/manager en prod) */}
+              <Link href="/depots/new">
                 <Button variant="primary">
                   <Plus className="h-4 w-4 mr-2" />
                   Nouveau dépôt
                 </Button>
-              </Link> */}
+              </Link>
             </div>
           </PageHeader>
 

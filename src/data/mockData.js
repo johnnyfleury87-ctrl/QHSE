@@ -480,6 +480,43 @@ const mockApi = {
   // Depots
   getDepots: () => Promise.resolve(mockDepots),
   getDepotById: (id) => Promise.resolve(mockDepots.find(d => d.id === id)),
+  createDepot: (depotData) => {
+    // Validation UNIQUE code
+    const existingDepot = mockDepots.find(d => d.code === depotData.code);
+    if (existingDepot) {
+      return Promise.reject(new Error('Un dépôt avec ce code existe déjà'));
+    }
+
+    const newDepot = {
+      id: `depot-${String(mockDepots.length + 1).padStart(3, '0')}`,
+      ...depotData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    mockDepots.push(newDepot);
+    return Promise.resolve(newDepot);
+  },
+  updateDepot: (id, depotData) => {
+    const index = mockDepots.findIndex(d => d.id === id);
+    if (index === -1) {
+      return Promise.reject(new Error('Dépôt introuvable'));
+    }
+
+    // Validation UNIQUE code (si modifié)
+    if (depotData.code && depotData.code !== mockDepots[index].code) {
+      const existingDepot = mockDepots.find(d => d.code === depotData.code && d.id !== id);
+      if (existingDepot) {
+        return Promise.reject(new Error('Un dépôt avec ce code existe déjà'));
+      }
+    }
+
+    mockDepots[index] = {
+      ...mockDepots[index],
+      ...depotData,
+      updatedAt: new Date().toISOString(),
+    };
+    return Promise.resolve(mockDepots[index]);
+  },
   
   // Zones
   getZones: () => Promise.resolve(mockZones),
