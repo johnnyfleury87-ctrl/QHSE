@@ -522,6 +522,48 @@ const mockApi = {
   getZones: () => Promise.resolve(mockZones),
   getZonesByDepot: (depotId) => Promise.resolve(mockZones.filter(z => z.depotId === depotId)),
   getZoneById: (id) => Promise.resolve(mockZones.find(z => z.id === id)),
+  createZone: (zoneData) => {
+    // Validation UNIQUE (depot_id, code)
+    const existingZone = mockZones.find(z => z.depotId === zoneData.depotId && z.code === zoneData.code);
+    if (existingZone) {
+      return Promise.reject(new Error('Une zone avec ce code existe déjà dans ce dépôt'));
+    }
+
+    const newZone = {
+      id: `zone-${String(mockZones.length + 1).padStart(3, '0')}`,
+      ...zoneData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    mockZones.push(newZone);
+    return Promise.resolve(newZone);
+  },
+  updateZone: (id, zoneData) => {
+    const index = mockZones.findIndex(z => z.id === id);
+    if (index === -1) {
+      return Promise.reject(new Error('Zone introuvable'));
+    }
+
+    // Validation UNIQUE (depot_id, code) si code modifié
+    if (zoneData.code && zoneData.code !== mockZones[index].code) {
+      const depotId = zoneData.depotId || mockZones[index].depotId;
+      const existingZone = mockZones.find(z => 
+        z.depotId === depotId && 
+        z.code === zoneData.code && 
+        z.id !== id
+      );
+      if (existingZone) {
+        return Promise.reject(new Error('Une zone avec ce code existe déjà dans ce dépôt'));
+      }
+    }
+
+    mockZones[index] = {
+      ...mockZones[index],
+      ...zoneData,
+      updatedAt: new Date().toISOString(),
+    };
+    return Promise.resolve(mockZones[index]);
+  },
   
   // Templates
   getTemplates: () => Promise.resolve(mockTemplates),
