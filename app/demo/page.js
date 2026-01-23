@@ -28,7 +28,8 @@ import {
   TrendingUp,
   AlertTriangle,
   Calendar,
-  Building2
+  Building2,
+  FileText
 } from 'lucide-react'
 import mockApi from '@/src/data/mockData'
 
@@ -225,6 +226,12 @@ export default function DemoPage() {
                 <Button variant="outline">
                   <Building2 className="h-4 w-4 mr-2" />
                   Voir les dépôts
+                </Button>
+              </Link>
+              <Link href="/templates">
+                <Button variant="outline">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Voir les templates
                 </Button>
               </Link>
               <Link href="/">
