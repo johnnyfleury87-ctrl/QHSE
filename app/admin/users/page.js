@@ -29,6 +29,18 @@ export default function AdminUsersPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
 
+  // 🔍 LOG DIAGNOSTIQUE
+  useEffect(() => {
+    console.log('👥 ADMIN USERS PAGE render:', {
+      hasUser: !!user,
+      loading,
+      hasError: !!error,
+      usersCount: users.length,
+      filteredCount: filteredUsers.length,
+      showModal: showCreateModal
+    })
+  }, [user, loading, error, users, filteredUsers, showCreateModal])
+
   useEffect(() => {
     loadUsers()
   }, [])

@@ -23,6 +23,18 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  // 🔍 LOG DIAGNOSTIQUE
+  useEffect(() => {
+    console.log('📊 ADMIN DASHBOARD render:', {
+      hasProfile: !!profile,
+      profileRole: profile?.role,
+      isJetcAdmin: profile?.is_jetc_admin,
+      loading,
+      hasError: !!error,
+      hasStats: !!stats
+    })
+  }, [profile, loading, error, stats])
+
   useEffect(() => {
     loadStats()
   }, [])
@@ -159,16 +171,22 @@ export default function AdminDashboardPage() {
           {/* Liens rapides */}
           <Card>
             <CardHeader>
-              <CardTitle>Accès rapide</CardTitle>
+              <CardTitle>Gestion de la plateforme</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Carte UTILISATEURS mise en avant */}
               <Link href="/admin/users">
-                <Button variant="outline" className="w-full justify-between">
-                  <span className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Gérer les utilisateurs
+                <Button variant="default" className="w-full justify-between bg-primary text-primary-foreground hover:bg-primary/90 h-auto py-4">
+                  <span className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-primary-foreground/20 flex items-center justify-center">
+                      <Users className="h-5 w-5" />
+                    </div>
+                    <div className="text-left">
+                      <div className="font-semibold">Gérer les utilisateurs</div>
+                      <div className="text-xs opacity-90">Créer, modifier, désactiver des comptes</div>
+                    </div>
                   </span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-5 w-5" />
                 </Button>
               </Link>
               
