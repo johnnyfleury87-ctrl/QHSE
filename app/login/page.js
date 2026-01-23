@@ -85,14 +85,14 @@ export default function LoginPage() {
       <div className="max-w-md mx-auto mt-12">
         <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
-          Retour à l'accueil
+          Retour à l&apos;accueil
         </Link>
 
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl">Connexion</CardTitle>
             <CardDescription>
-              Entrez vos identifiants pour accéder à l'application
+              Entrez vos identifiants pour accéder à l&apos;application
             </CardDescription>
           </CardHeader>
           <CardContent>
