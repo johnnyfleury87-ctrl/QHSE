@@ -316,6 +316,40 @@ export default function AuditQuestionsPage({ params }) {
           </div>
         )
 
+      case 'number':
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                step="0.1"
+                value={value}
+                onChange={(e) => {
+                  setAnswers(prev => ({
+                    ...prev,
+                    [question.id]: { value: e.target.value, comment }
+                  }))
+                }}
+                onBlur={(e) => handleSaveAnswer(question.id, e.target.value, comment)}
+                disabled={saving || audit.status === 'termine'}
+                placeholder="Entrez la valeur..."
+                className="w-40"
+              />
+              {question.rule_config?.unit && (
+                <span className="text-sm text-muted-foreground">
+                  {question.rule_config.unit}
+                </span>
+              )}
+            </div>
+            {question.rule_config && (question.rule_config.min !== undefined || question.rule_config.max !== undefined) && (
+              <div className="text-xs text-muted-foreground">
+                Limites acceptables: {question.rule_config.min ?? '?'}{question.rule_config.unit || ''} - {question.rule_config.max ?? '?'}{question.rule_config.unit || ''}
+              </div>
+            )}
+            {renderCommentField(question.id, comment)}
+          </div>
+        )
+
       default:
         return (
           <Input
@@ -513,7 +547,12 @@ export default function AuditQuestionsPage({ params }) {
                               </div>
                               <h4 className="font-medium mb-1">{question.label}</h4>
                               <p className="text-sm text-muted-foreground">
-                                Type: {question.type === 'yes_no' ? 'Oui/Non' : question.type === 'score_1_5' ? 'Note 1-5' : 'Texte'}
+                                Type: {
+                                  question.type === 'yes_no' ? 'Oui/Non' : 
+                                  question.type === 'score_1_5' ? 'Note 1-5' : 
+                                  question.type === 'number' ? 'Numérique' :
+                                  'Texte'
+                                }
                               </p>
                             </div>
                           </div>

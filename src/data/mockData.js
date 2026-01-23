@@ -286,6 +286,23 @@ export const mockQuestions = [
     criticality: 'low',
     order: 3,
   },
+  
+  // Question température (type number avec rule_config)
+  {
+    id: 'q-quality-007',
+    categoryId: 'cat-quality-002',
+    templateId: 'template-quality-001',
+    label: 'Température chambre froide (°C)',
+    type: 'number',
+    criticality: 'critical',
+    rule_config: {
+      type: 'temperature',
+      min: -18,
+      max: -15,
+      unit: '°C'
+    },
+    order: 4,
+  },
 ];
 
 // ============================================
