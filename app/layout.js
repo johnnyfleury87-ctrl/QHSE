@@ -1,11 +1,13 @@
 /**
  * Layout Racine Next.js
  * Source: docs/DESIGN_SYSTEM_QHSE.md
- * Gère: dark mode, meta tags, providers globaux
+ * Gère: dark mode, meta tags, providers globaux, auth context
  */
 
 import './globals.css'
 import { ThemeProvider } from '@/components/providers/theme-provider'
+import { AuthProvider } from '@/lib/auth-context'
+import { DemoBanner } from '@/components/ui/demo-banner'
 
 export const metadata = {
   title: 'QHSE - Gestion des audits et non-conformités',
@@ -27,7 +29,10 @@ export default function RootLayout({ children }) {
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <AuthProvider>
+            <DemoBanner />
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
