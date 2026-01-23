@@ -48,8 +48,17 @@ export async function POST(request) {
     // Extraire le token
     const token = authHeader.replace('Bearer ', '')
     
+    // ✅ Créer client Supabase AUTHENTIFIÉ avec le token utilisateur
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    })
+    
     // Vérifier le token et récupérer l'utilisateur
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
     
     console.log('🔐 API POST /api/admin/users - Auth:', {
       hasAuthHeader: !!authHeader,
@@ -63,8 +72,9 @@ export async function POST(request) {
       return Response.json({ error: 'Token invalide' }, { status: 401 })
     }
 
-    // 2. Vérifier que l'utilisateur est JETC admin (MÊME RÈGLE QUE FRONT)
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // 2. Vérifier que l'utilisateur est JETC admin (LIRE AVEC SON TOKEN)
+    // ✅ Utiliser supabaseUser (avec token) pour lire SON propre profil (RLS OK)
+    const { data: profile, error: profileError } = await supabaseUser
       .from('profiles')
       .select('id, email, status, is_jetc_admin')
       .eq('id', user.id)
@@ -214,7 +224,17 @@ export async function GET(request) {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+    
+    // ✅ Créer client Supabase AUTHENTIFIÉ avec le token utilisateur
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    })
+    
+    const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
     
     console.log('🔐 API GET /api/admin/users - Auth:', {
       hasAuthHeader: !!authHeader,
@@ -228,8 +248,9 @@ export async function GET(request) {
       return Response.json({ error: 'Token invalide' }, { status: 401 })
     }
 
-    // 2. Vérifier que l'utilisateur est JETC admin (MÊME RÈGLE QUE FRONT)
-    const { data: profile, error: profileError } = await supabaseAdmin
+    // 2. Vérifier que l'utilisateur est JETC admin (LIRE AVEC SON TOKEN)
+    // ✅ Utiliser supabaseUser (avec token) pour lire SON propre profil (RLS OK)
+    const { data: profile, error: profileError } = await supabaseUser
       .from('profiles')
       .select('id, email, status, is_jetc_admin')
       .eq('id', user.id)

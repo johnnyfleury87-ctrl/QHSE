@@ -42,7 +42,17 @@ async function verifyJETCAdmin(request) {
   }
 
   const token = authHeader.replace('Bearer ', '')
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+  
+  // ✅ Créer client Supabase AUTHENTIFIÉ avec le token utilisateur
+  const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  })
+  
+  const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
   
   console.log('🔐 API /api/admin/users/[id] - Auth:', {
     hasAuthHeader: !!authHeader,
@@ -56,8 +66,8 @@ async function verifyJETCAdmin(request) {
     return { error: 'Token invalide', status: 401 }
   }
 
-  // Vérifier profil avec MÊME RÈGLE que front
-  const { data: profile, error: profileError } = await supabaseAdmin
+  // Vérifier profil avec SON TOKEN (RLS OK)
+  const { data: profile, error: profileError } = await supabaseUser
     .from('profiles')
     .select('id, email, status, is_jetc_admin')
     .eq('id', user.id)
