@@ -7,7 +7,7 @@
  * API: mockApi.getAudits() via apiWrapper
  * 
  * Objectif: Afficher liste des audits avec filtres (statut)
- * Support query params: ?status=assigned|in_progress|completed
+ * Support query params: ?status=planifie|en_cours|termine
  */
 
 'use client'
@@ -91,17 +91,19 @@ function AuditsContent() {
   // Badge statut
   const getStatusBadge = (status) => {
     const variants = {
-      assigned: 'audit-assigned',
-      in_progress: 'audit-in-progress',
-      completed: 'audit-completed',
-      draft: 'audit-draft'
+      planifie: 'audit-assigned',
+      en_cours: 'audit-in-progress',
+      termine: 'audit-completed',
+      brouillon: 'audit-draft',
+      annule: 'audit-draft'
     }
     
     const labels = {
-      assigned: 'À faire',
-      in_progress: 'En cours',
-      completed: 'Terminé',
-      draft: 'Brouillon'
+      planifie: 'À faire',
+      en_cours: 'En cours',
+      termine: 'Terminé',
+      brouillon: 'Brouillon',
+      annule: 'Annulé'
     }
 
     return <Badge variant={variants[status] || 'default'}>{labels[status] || status}</Badge>
@@ -178,28 +180,28 @@ function AuditsContent() {
                   Tous ({audits.length})
                 </Button>
               </Link>
-              <Link href="/audits?status=assigned">
+              <Link href="/audits?status=planifie">
                 <Button 
-                  variant={statusFilter === 'assigned' ? 'primary' : 'outline'}
+                  variant={statusFilter === 'planifie' ? 'primary' : 'outline'}
                   size="sm"
                 >
-                  À faire ({audits.filter(a => a.status === 'assigned').length})
+                  À faire ({audits.filter(a => a.status === 'planifie').length})
                 </Button>
               </Link>
-              <Link href="/audits?status=in_progress">
+              <Link href="/audits?status=en_cours">
                 <Button 
-                  variant={statusFilter === 'in_progress' ? 'primary' : 'outline'}
+                  variant={statusFilter === 'en_cours' ? 'primary' : 'outline'}
                   size="sm"
                 >
-                  En cours ({audits.filter(a => a.status === 'in_progress').length})
+                  En cours ({audits.filter(a => a.status === 'en_cours').length})
                 </Button>
               </Link>
-              <Link href="/audits?status=completed">
+              <Link href="/audits?status=termine">
                 <Button 
-                  variant={statusFilter === 'completed' ? 'primary' : 'outline'}
+                  variant={statusFilter === 'termine' ? 'primary' : 'outline'}
                   size="sm"
                 >
-                  Terminés ({audits.filter(a => a.status === 'completed').length})
+                  Terminés ({audits.filter(a => a.status === 'termine').length})
                 </Button>
               </Link>
             </div>

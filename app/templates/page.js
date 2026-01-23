@@ -84,7 +84,7 @@ export default function TemplatesPage() {
 
   // Filtre statut
   if (statusFilter) {
-    filteredTemplates = filteredTemplates.filter(t => t.status === statusFilter)
+    filteredTemplates = filteredTemplates.filter(t => t.statut === statusFilter)
   }
 
   // Filtre domaine (type dans mockData)
@@ -133,9 +133,9 @@ export default function TemplatesPage() {
   // Stats pour filtres
   const stats = {
     total: templates.length,
-    active: templates.filter(t => t.status === 'active').length,
-    draft: templates.filter(t => t.status === 'draft').length,
-    archive: templates.filter(t => t.status === 'archive').length,
+    actif: templates.filter(t => t.statut === 'actif').length,
+    brouillon: templates.filter(t => t.statut === 'brouillon').length,
+    archive: templates.filter(t => t.statut === 'archive').length,
     security: templates.filter(t => t.type === 'security').length,
     quality: templates.filter(t => t.type === 'quality').length,
     hygiene: templates.filter(t => t.type === 'hygiene').length,
@@ -214,18 +214,18 @@ export default function TemplatesPage() {
                     Tous ({stats.total})
                   </Button>
                   <Button 
-                    variant={statusFilter === 'active' ? 'primary' : 'outline'}
+                    variant={statusFilter === 'actif' ? 'primary' : 'outline'}
                     size="sm"
-                    onClick={() => setStatusFilter('active')}
+                    onClick={() => setStatusFilter('actif')}
                   >
-                    Actifs ({stats.active})
+                    Actifs ({stats.actif})
                   </Button>
                   <Button 
-                    variant={statusFilter === 'draft' ? 'primary' : 'outline'}
+                    variant={statusFilter === 'brouillon' ? 'primary' : 'outline'}
                     size="sm"
-                    onClick={() => setStatusFilter('draft')}
+                    onClick={() => setStatusFilter('brouillon')}
                   >
-                    Brouillons ({stats.draft})
+                    Brouillons ({stats.brouillon})
                   </Button>
                   <Button 
                     variant={statusFilter === 'archive' ? 'primary' : 'outline'}

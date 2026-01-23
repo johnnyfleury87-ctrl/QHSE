@@ -100,33 +100,33 @@ export default function DemoPage() {
   // KPIs data
   const kpis = [
     {
-      id: 'audits-assigned',
+      id: 'audits-planifie',
       title: 'Audits à faire',
-      value: stats.audits.assigned,
+      value: stats.audits.planifie,
       icon: Calendar,
       color: 'text-orange-600',
       bgColor: 'bg-orange-50 dark:bg-orange-950',
-      href: '/audits?status=assigned',
+      href: '/audits?status=planifie',
       description: 'Audits planifiés'
     },
     {
-      id: 'audits-in-progress',
+      id: 'audits-en-cours',
       title: 'Audits en cours',
-      value: stats.audits.inProgress,
+      value: stats.audits.en_cours,
       icon: ClipboardCheck,
       color: 'text-blue-600',
       bgColor: 'bg-blue-50 dark:bg-blue-950',
-      href: '/audits?status=in_progress',
+      href: '/audits?status=en_cours',
       description: 'En cours de réalisation'
     },
     {
-      id: 'audits-completed',
+      id: 'audits-termine',
       title: 'Audits terminés (30j)',
-      value: stats.audits.completed,
+      value: stats.audits.termine,
       icon: CheckCircle2,
       color: 'text-green-600',
       bgColor: 'bg-green-50 dark:bg-green-950',
-      href: '/audits?status=completed',
+      href: '/audits?status=termine',
       description: 'Ce mois-ci'
     },
     {
@@ -142,11 +142,11 @@ export default function DemoPage() {
     {
       id: 'nc-open',
       title: 'NC ouvertes',
-      value: stats.nonConformities.open,
+      value: stats.nonConformities.ouverte,
       icon: AlertCircle,
       color: 'text-red-600',
       bgColor: 'bg-red-50 dark:bg-red-950',
-      href: '/non-conformites?status=open',
+      href: '/non-conformites?status=ouverte',
       description: 'À traiter'
     },
     {

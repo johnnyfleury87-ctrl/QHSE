@@ -122,17 +122,19 @@ export default function DepotDetailPage({ params }) {
   // Badge statut audit
   const getAuditStatusBadge = (status) => {
     const variants = {
-      assigned: 'audit-assigned',
-      in_progress: 'audit-in-progress',
-      completed: 'audit-completed',
-      draft: 'audit-draft'
+      planifie: 'audit-assigned',
+      en_cours: 'audit-in-progress',
+      termine: 'audit-completed',
+      brouillon: 'audit-draft',
+      annule: 'audit-draft'
     }
     
     const labels = {
-      assigned: 'À faire',
-      in_progress: 'En cours',
-      completed: 'Terminé',
-      draft: 'Brouillon'
+      planifie: 'À faire',
+      en_cours: 'En cours',
+      termine: 'Terminé',
+      brouillon: 'Brouillon',
+      annule: 'Annulé'
     }
 
     return <Badge variant={variants[status]}>{labels[status]}</Badge>

@@ -289,7 +289,7 @@ export const mockQuestions = [
 ];
 
 // ============================================
-// 7. AUDITS (3 audits: assigned, in_progress, completed)
+// 7. AUDITS (3 audits: planifie, en_cours, termine)
 // ============================================
 export const mockAudits = [
   // Audit 1: assigné (pas commencé)
@@ -299,7 +299,7 @@ export const mockAudits = [
     depotId: 'depot-001',
     zoneId: 'zone-001',
     assignedTo: 'user-safety-001', // Pierre Dubois (safety_auditor)
-    status: 'assigned',
+    status: 'planifie',
     scheduledDate: '2026-02-01',
     completedDate: null,
     reportUrl: null,
@@ -314,7 +314,7 @@ export const mockAudits = [
     depotId: 'depot-001',
     zoneId: 'zone-002',
     assignedTo: 'user-qh-001', // Marie Martin (qh_auditor)
-    status: 'in_progress',
+    status: 'en_cours',
     scheduledDate: '2026-01-20',
     completedDate: null,
     reportUrl: null,
@@ -329,7 +329,7 @@ export const mockAudits = [
     depotId: 'depot-001',
     zoneId: 'zone-001',
     assignedTo: 'user-safety-001',
-    status: 'completed',
+    status: 'termine',
     scheduledDate: '2026-01-18',
     completedDate: '2026-01-18',
     reportUrl: '/reports/audit-003.pdf',
@@ -342,7 +342,7 @@ export const mockAudits = [
 // 8. RESPONSES (réponses audits)
 // ============================================
 export const mockResponses = [
-  // Audit 002 (in_progress): 3 réponses partielles
+  // Audit 002 (en_cours): 3 réponses partielles
   {
     id: 'resp-002-001',
     auditId: 'audit-002',
@@ -371,7 +371,7 @@ export const mockResponses = [
     respondedAt: '2026-01-20T14:20:00Z',
   },
   
-  // Audit 003 (completed): toutes les réponses (6 questions template security)
+  // Audit 003 (termine): toutes les réponses (6 questions template security)
   {
     id: 'resp-003-001',
     auditId: 'audit-003',
@@ -441,7 +441,7 @@ export const mockNonConformities = [
     title: 'Casques non conformes EN397',
     description: 'Les casques de sécurité ne respectent pas la norme EN397 en vigueur',
     priority: 'critical',
-    status: 'open',
+    status: 'ouverte',
     detectedBy: 'user-safety-001',
     assignedTo: 'user-manager-001',
     deadline: '2026-02-15',
@@ -458,16 +458,16 @@ export const calculateDashboardStats = () => {
   return {
     audits: {
       total: mockAudits.length,
-      assigned: mockAudits.filter(a => a.status === 'assigned').length,
-      inProgress: mockAudits.filter(a => a.status === 'in_progress').length,
-      completed: mockAudits.filter(a => a.status === 'completed').length,
+      planifie: mockAudits.filter(a => a.status === 'planifie').length,
+      en_cours: mockAudits.filter(a => a.status === 'en_cours').length,
+      termine: mockAudits.filter(a => a.status === 'termine').length,
     },
     nonConformities: {
       total: mockNonConformities.length,
-      open: mockNonConformities.filter(nc => nc.status === 'open').length,
-      inProgress: mockNonConformities.filter(nc => nc.status === 'in_progress').length,
-      resolved: mockNonConformities.filter(nc => nc.status === 'resolved').length,
-      closed: mockNonConformities.filter(nc => nc.status === 'closed').length,
+      ouverte: mockNonConformities.filter(nc => nc.status === 'ouverte').length,
+      en_traitement: mockNonConformities.filter(nc => nc.status === 'en_traitement').length,
+      resolue: mockNonConformities.filter(nc => nc.status === 'resolue').length,
+      fermee: mockNonConformities.filter(nc => nc.status === 'fermee').length,
       critical: mockNonConformities.filter(nc => nc.priority === 'critical').length,
       high: mockNonConformities.filter(nc => nc.priority === 'high').length,
     },

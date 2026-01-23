@@ -101,10 +101,10 @@ function NonConformitesContent() {
   // Stats pour filtres
   const stats = {
     total: nonConformities.length,
-    open: nonConformities.filter(nc => nc.status === 'open').length,
-    inProgress: nonConformities.filter(nc => nc.status === 'in_progress').length,
-    resolved: nonConformities.filter(nc => nc.status === 'resolved').length,
-    closed: nonConformities.filter(nc => nc.status === 'closed').length,
+    open: nonConformities.filter(nc => nc.status === 'ouverte').length,
+    en_traitement: nonConformities.filter(nc => nc.status === 'en_traitement').length,
+    resolue: nonConformities.filter(nc => nc.status === 'resolue').length,
+    fermee: nonConformities.filter(nc => nc.status === 'fermee').length,
     critical: nonConformities.filter(nc => nc.priority === 'critical').length,
     high: nonConformities.filter(nc => nc.priority === 'high').length,
     medium: nonConformities.filter(nc => nc.priority === 'medium').length,
@@ -176,28 +176,28 @@ function NonConformitesContent() {
                     Toutes ({stats.total})
                   </Button>
                 </Link>
-                <Link href="/non-conformites?status=open">
+                <Link href="/non-conformites?status=ouverte">
                   <Button 
-                    variant={statusFilter === 'open' ? 'primary' : 'outline'}
+                    variant={statusFilter === 'ouverte' ? 'primary' : 'outline'}
                     size="sm"
                   >
                     Ouvertes ({stats.open})
                   </Button>
                 </Link>
-                <Link href="/non-conformites?status=in_progress">
+                <Link href="/non-conformites?status=en_traitement">
                   <Button 
-                    variant={statusFilter === 'in_progress' ? 'primary' : 'outline'}
+                    variant={statusFilter === 'en_traitement' ? 'primary' : 'outline'}
                     size="sm"
                   >
-                    En traitement ({stats.inProgress})
+                    En traitement ({stats.en_traitement})
                   </Button>
                 </Link>
-                <Link href="/non-conformites?status=resolved">
+                <Link href="/non-conformites?status=resolue">
                   <Button 
-                    variant={statusFilter === 'resolved' ? 'primary' : 'outline'}
+                    variant={statusFilter === 'resolue' ? 'primary' : 'outline'}
                     size="sm"
                   >
-                    Résolues ({stats.resolved})
+                    Résolues ({stats.resolue})
                   </Button>
                 </Link>
                 <Link href="/non-conformites?status=closed">
