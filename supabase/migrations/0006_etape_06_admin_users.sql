@@ -92,7 +92,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER
 SET search_path = public;
 
-COMMENT ON FUNCTION is_jetc_admin IS 'Vérifie si l\'utilisateur connecté est JETC admin';
+COMMENT ON FUNCTION is_jetc_admin IS 'Vérifie si l''utilisateur connecté est JETC admin';
 
 -- =====================================================================
 -- 5. PROTECTION: Empêcher auto-modification is_jetc_admin
@@ -104,7 +104,7 @@ RETURNS TRIGGER AS $$
 BEGIN
   -- Si utilisateur tente de modifier son propre is_jetc_admin
   IF NEW.id = auth.uid() AND OLD.is_jetc_admin != NEW.is_jetc_admin THEN
-    -- Vérifier si l'utilisateur est déjà JETC admin
+    -- Vérifier si l''utilisateur est déjà JETC admin
     IF NOT is_jetc_admin() THEN
       RAISE EXCEPTION 'Interdiction: impossible de s''auto-attribuer le flag is_jetc_admin'
         USING ERRCODE = 'insufficient_privilege';
