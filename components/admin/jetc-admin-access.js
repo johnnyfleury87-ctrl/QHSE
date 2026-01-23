@@ -1,60 +1,39 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ShieldCheck, ArrowRight } from 'lucide-react'
+import { useAuth } from '@/lib/auth-context'
 
 /**
  * Composant: Bloc d'accès JETC Solution (admin uniquement)
  * Visible uniquement si l'utilisateur connecté a is_jetc_admin = true
+ * FIX: Utilise useAuth() au lieu de dupliquer la logique
  */
 export function JETCAdminAccess() {
-  const [profile, setProfile] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const { profile, loading } = useAuth()
 
-  useEffect(() => {
-    async function checkJETCAdmin() {
-      try {
-        // Vérifier si Supabase est configuré
-        const { supabase } = await import('@/lib/supabase-client')
-        if (!supabase) {
-          setLoading(false)
-          return
-        }
+  // 🔍 LOG DIAGNOSTIQUE
+  console.log('🎫 JETCAdminAccess render:', {
+    loading,
+    hasProfile: !!profile,
+    isJetcAdmin: profile?.is_jetc_admin,
+    profileRole: profile?.role,
+    profileStatus: profile?.status
+  })
 
-        // Récupérer la session
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-          setLoading(false)
-          return
-        }
-
-        // Récupérer le profil
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('is_jetc_admin')
-          .eq('id', session.user.id)
-          .single()
-
-        if (!error && data?.is_jetc_admin) {
-          setProfile(data)
-        }
-      } catch (error) {
-        console.error('Erreur vérification JETC admin:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    checkJETCAdmin()
-  }, [])
-
-  // Ne rien afficher si pas JETC admin
-  if (loading || !profile?.is_jetc_admin) {
+  // Ne rien afficher si:
+  // - en cours de chargement
+  // - pas de profil
+  // - profil pas is_jetc_admin
+  // - profil inactif
+  if (loading || !profile?.is_jetc_admin || profile?.status !== 'active') {
+    console.log('🎫 JETCAdminAccess: caché (critères non remplis)')
     return null
   }
+
+  console.log('🎫 JETCAdminAccess: visible (autorisé)')
 
   return (
     <div className="mt-16">
