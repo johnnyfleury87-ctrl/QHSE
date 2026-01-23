@@ -51,22 +51,54 @@ export async function POST(request) {
     // Vérifier le token et récupérer l'utilisateur
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
+    console.log('🔐 API POST /api/admin/users - Auth:', {
+      hasAuthHeader: !!authHeader,
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      authError: authError?.message
+    })
+    
     if (authError || !user) {
       return Response.json({ error: 'Token invalide' }, { status: 401 })
     }
 
-    // 2. Vérifier que l'utilisateur est JETC admin
+    // 2. Vérifier que l'utilisateur est JETC admin (MÊME RÈGLE QUE FRONT)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('is_jetc_admin')
+      .select('id, email, status, is_jetc_admin')
       .eq('id', user.id)
       .single()
 
-    if (profileError || !profile?.is_jetc_admin) {
+    console.log('🔐 API POST /api/admin/users - Profil:', {
+      hasProfile: !!profile,
+      profileStatus: profile?.status,
+      isJetcAdmin: profile?.is_jetc_admin,
+      profileError: profileError?.message
+    })
+
+    // Vérification 1: profil existe
+    if (profileError || !profile) {
+      return Response.json({ 
+        error: 'Profil non initialisé - Contactez un administrateur' 
+      }, { status: 409 })
+    }
+
+    // Vérification 2: statut actif
+    if (profile.status !== 'active') {
+      return Response.json({ 
+        error: 'Compte désactivé - Contactez un administrateur' 
+      }, { status: 403 })
+    }
+
+    // Vérification 3: flag JETC admin
+    if (profile.is_jetc_admin !== true) {
       return Response.json({ 
         error: 'Accès refusé: réservé aux administrateurs JETC Solution' 
       }, { status: 403 })
     }
+
+    console.log('✅ API POST /api/admin/users - Autorisé:', user.email)
 
     // 3. Récupérer les données du formulaire
     const body = await request.json()
@@ -174,22 +206,54 @@ export async function GET(request) {
     const token = authHeader.replace('Bearer ', '')
     const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
+    console.log('🔐 API GET /api/admin/users - Auth:', {
+      hasAuthHeader: !!authHeader,
+      hasUser: !!user,
+      userId: user?.id,
+      userEmail: user?.email,
+      authError: authError?.message
+    })
+    
     if (authError || !user) {
       return Response.json({ error: 'Token invalide' }, { status: 401 })
     }
 
-    // 2. Vérifier que l'utilisateur est JETC admin
+    // 2. Vérifier que l'utilisateur est JETC admin (MÊME RÈGLE QUE FRONT)
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
-      .select('is_jetc_admin')
+      .select('id, email, status, is_jetc_admin')
       .eq('id', user.id)
       .single()
 
-    if (profileError || !profile?.is_jetc_admin) {
+    console.log('🔐 API GET /api/admin/users - Profil:', {
+      hasProfile: !!profile,
+      profileStatus: profile?.status,
+      isJetcAdmin: profile?.is_jetc_admin,
+      profileError: profileError?.message
+    })
+
+    // Vérification 1: profil existe
+    if (profileError || !profile) {
+      return Response.json({ 
+        error: 'Profil non initialisé - Contactez un administrateur' 
+      }, { status: 409 })
+    }
+
+    // Vérification 2: statut actif
+    if (profile.status !== 'active') {
+      return Response.json({ 
+        error: 'Compte désactivé - Contactez un administrateur' 
+      }, { status: 403 })
+    }
+
+    // Vérification 3: flag JETC admin
+    if (profile.is_jetc_admin !== true) {
       return Response.json({ 
         error: 'Accès refusé: réservé aux administrateurs JETC Solution' 
       }, { status: 403 })
     }
+
+    console.log('✅ API GET /api/admin/users - Autorisé:', user.email)
 
     // 3. Récupérer tous les utilisateurs
     const { data: users, error: usersError } = await supabaseAdmin
