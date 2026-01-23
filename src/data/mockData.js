@@ -629,6 +629,39 @@ const mockApi = {
   getAudits: () => Promise.resolve(mockAudits),
   getAuditById: (id) => Promise.resolve(mockAudits.find(a => a.id === id)),
   getAuditsByUser: (userId) => Promise.resolve(mockAudits.filter(a => a.assignedTo === userId)),
+  createAudit: (auditData) => {
+    // Validation: template doit être actif (règle métier G.4)
+    const template = mockTemplates.find(t => t.id === auditData.templateId);
+    if (!template || template.statut !== 'actif') {
+      return Promise.reject(new Error('Le template sélectionné n\'est pas actif'));
+    }
+
+    // Validation: auditeur doit être valide (règle métier G.4)
+    const auditeur = mockUsers.find(u => u.id === auditData.auditeurId);
+    if (!auditeur || !['qh_auditor', 'safety_auditor', 'qhse_manager'].includes(auditeur.role)) {
+      return Promise.reject(new Error('L\'auditeur sélectionné n\'est pas valide'));
+    }
+
+    // Validation: XOR depot_id / zone_id (contrainte SQL G.4)
+    if ((auditData.depotId && auditData.zoneId) || (!auditData.depotId && !auditData.zoneId)) {
+      return Promise.reject(new Error('Vous devez sélectionner soit un dépôt, soit une zone (pas les deux)'));
+    }
+
+    const newAudit = {
+      id: `audit-${String(mockAudits.length + 1).padStart(3, '0')}`,
+      templateId: auditData.templateId,
+      depotId: auditData.depotId || null,
+      zoneId: auditData.zoneId || null,
+      auditeurId: auditData.auditeurId,
+      status: auditData.statut || 'planifie', // Statut initial G.4
+      scheduledDate: auditData.datePrevue,
+      startedAt: null,
+      completedAt: null,
+      createdAt: new Date().toISOString(),
+    };
+    mockAudits.push(newAudit);
+    return Promise.resolve(newAudit);
+  },
   
   // Responses
   getResponsesByAudit: (auditId) => Promise.resolve(mockResponses.filter(r => r.auditId === auditId)),

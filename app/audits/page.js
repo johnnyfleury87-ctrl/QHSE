@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/table'
 import { LoadingState, EmptyState, ErrorState, TableSkeleton } from '@/components/ui/loading-states'
 import { formatDate } from '@/lib/utils/formatters'
-import { ClipboardCheck, ArrowLeft } from 'lucide-react'
+import { ClipboardCheck, ArrowLeft, Plus } from 'lucide-react'
 import mockApi from '@/src/data/mockData'
 
 function AuditsContent() {
@@ -151,12 +151,20 @@ function AuditsContent() {
                 : "Liste complète des audits QHSE"
             }
           >
-            <Link href="/demo">
-              <Button variant="outline">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour au dashboard
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/audits/new">
+                <Button variant="primary">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nouvel audit
+                </Button>
+              </Link>
+              <Link href="/demo">
+                <Button variant="outline">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Retour
+                </Button>
+              </Link>
+            </div>
           </PageHeader>
 
           {/* Filtres rapides */}
