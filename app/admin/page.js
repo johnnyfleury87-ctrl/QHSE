@@ -176,7 +176,7 @@ export default function AdminDashboardPage() {
                 <Button variant="outline" className="w-full justify-between">
                   <span className="flex items-center gap-2">
                     <ClipboardCheck className="h-4 w-4" />
-                    Gérer les templates d'audit
+                    Gérer les templates d&apos;audit
                   </span>
                   <ArrowRight className="h-4 w-4" />
                 </Button>

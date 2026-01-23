@@ -15,7 +15,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AppShell } from '@/components/layout/app-shell'
@@ -53,11 +53,7 @@ export default function AuditQuestionsPage({ params }) {
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
 
-  useEffect(() => {
-    loadData()
-  }, [auditId])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -116,7 +112,11 @@ export default function AuditQuestionsPage({ params }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [auditId])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   // Helper pour noms catégories (hardcodé pour démo, à améliorer)
   const getCategoryName = (categoryId) => {

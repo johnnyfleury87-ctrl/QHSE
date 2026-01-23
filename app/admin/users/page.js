@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/lib/auth-context'
 import { supabase } from '@/lib/supabase-client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -35,7 +35,7 @@ export default function AdminUsersPage() {
 
   useEffect(() => {
     filterUsers()
-  }, [users, searchQuery, roleFilter, statusFilter])
+  }, [filterUsers])
 
   const loadUsers = async () => {
     try {
@@ -74,7 +74,7 @@ export default function AdminUsersPage() {
     }
   }
 
-  const filterUsers = () => {
+  const filterUsers = useCallback(() => {
     let filtered = [...users]
 
     // Filtre par recherche (email, nom, prénom)
@@ -99,7 +99,7 @@ export default function AdminUsersPage() {
     }
 
     setFilteredUsers(filtered)
-  }
+  }, [users, searchQuery, roleFilter, statusFilter])
 
   const getRoleBadgeVariant = (role) => {
     switch (role) {
@@ -454,7 +454,7 @@ function CreateUserModal({ onClose, onSuccess }) {
             <div className="bg-muted p-3 rounded-md text-sm text-muted-foreground">
               ℹ️ Mot de passe par défaut: <strong>Test1234!</strong>
               <br />
-              L'utilisateur pourra le changer à sa première connexion.
+              L&apos;utilisateur pourra le changer à sa première connexion.
             </div>
 
             {/* Erreur */}

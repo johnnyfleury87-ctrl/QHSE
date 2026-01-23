@@ -14,7 +14,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { AppShell } from '@/components/layout/app-shell'
@@ -48,11 +48,7 @@ export default function AuditReportPage({ params }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  useEffect(() => {
-    loadReport()
-  }, [auditId])
-
-  const loadReport = async () => {
+  const loadReport = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -73,7 +69,11 @@ export default function AuditReportPage({ params }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [auditId])
+
+  useEffect(() => {
+    loadReport()
+  }, [loadReport])
 
   // Badge statut
   const getStatusBadge = (status) => {
