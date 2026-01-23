@@ -5,122 +5,51 @@
  * Sécurité: Vérifie is_jetc_admin côté serveur
  */
 
-import { createClient } from '@supabase/supabase-js'
-
-// ✅ Vérification variables env (évite crash build)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-
-// Client Supabase avec service_role key (server-side uniquement)
-const supabaseAdmin = supabaseUrl && supabaseServiceKey
-  ? createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    })
-  : null
-
-// Client Supabase normal (pour vérification session)
-const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null
+import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase-server'
 
 /**
  * POST: Créer un nouvel utilisateur
  */
 export async function POST(request) {
   try {
-    // 0. Vérifier configuration
-    if (!supabaseAdmin || !supabase) {
-      return Response.json({ 
-        error: 'Service non configuré (variables env manquantes)' 
-      }, { status: 500 })
-    }
-
-    // 1. Vérifier authentification
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      return Response.json({ error: 'Non authentifié' }, { status: 401 })
-    }
-
-    // Extraire le token
-    const token = authHeader.replace('Bearer ', '')
+    // 1. Créer client Supabase avec cookies (session serveur)
+    const supabase = createSupabaseServerClient()
     
-    // ✅ Créer client Supabase AUTHENTIFIÉ avec le token utilisateur
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
+    // 2. Récupérer la session utilisateur
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    // Vérifier le token et récupérer l'utilisateur
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
-    
-    console.log('🔐 API POST /api/admin/users - Auth:', {
-      hasAuthHeader: !!authHeader,
+    console.log('🔐 API POST /api/admin/users - Session:', {
       hasUser: !!user,
       userId: user?.id,
-      userEmail: user?.email,
-      authError: authError?.message
+      userEmail: user?.email
     })
     
     if (authError || !user) {
-      return Response.json({ error: 'Token invalide' }, { status: 401 })
+      return Response.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // 2. Vérifier que l'utilisateur est JETC admin (LIRE AVEC SON TOKEN)
-    // ✅ Utiliser supabaseUser (avec token) pour lire SON propre profil (RLS OK)
-    const { data: profile, error: profileError } = await supabaseUser
+    // 3. Vérifier le profil
+    const { data: profile } = await supabase
       .from('profiles')
       .select('id, email, status, is_jetc_admin')
       .eq('id', user.id)
       .single()
 
-    // 🔍 LOG DIAGNOSTIQUE: Voir profil brut AVANT validation
-    console.log('🔍 API POST /api/admin/users - PROFIL RAW:', {
-      profile: profile,
-      profileError: profileError,
-      hasProfile: !!profile,
-      profileStatus: profile?.status,
-      isJetcAdmin: profile?.is_jetc_admin
-    })
-
-    // ❗ Vérification 1: profil existe (409 SEULEMENT si vraiment absent)
     if (!profile) {
-      console.error('❌ API POST: Profil ABSENT pour user', user.id)
-      return Response.json({ 
-        error: 'Profil non initialisé - Contactez un administrateur' 
-      }, { status: 409 })
+      return Response.json({ error: 'Profil non initialisé' }, { status: 409 })
     }
 
-    // Si profileError mais profile existe, log warning mais continue
-    if (profileError) {
-      console.warn('⚠️ API POST: profileError mais profil existe:', profileError.message)
-    }
-
-    // ✅ Vérification 2: statut actif
     if (profile.status !== 'active') {
-      console.error('❌ API POST: Compte désactivé:', profile.email, 'status=', profile.status)
-      return Response.json({ 
-        error: 'Compte désactivé - Contactez un administrateur' 
-      }, { status: 403 })
+      return Response.json({ error: 'Compte désactivé' }, { status: 403 })
     }
 
-    // ✅ Vérification 3: flag JETC admin
     if (profile.is_jetc_admin !== true) {
-      console.error('❌ API POST: Pas JETC admin:', profile.email, 'is_jetc_admin=', profile.is_jetc_admin)
-      return Response.json({ 
-        error: 'Accès refusé: réservé aux administrateurs JETC Solution' 
-      }, { status: 403 })
+      return Response.json({ error: 'Accès refusé: réservé aux administrateurs JETC Solution' }, { status: 403 })
     }
 
-    console.log('✅ API POST /api/admin/users - Autorisé:', user.email)
+    console.log('✅ API POST - Autorisé:', user.email)
 
-    // 3. Récupérer les données du formulaire
+    // 4. Récupérer les données du formulaire
     const body = await request.json()
     const { email, first_name, last_name, role } = body
 
@@ -131,22 +60,23 @@ export async function POST(request) {
       }, { status: 400 })
     }
 
-    // Validation email
     if (!email.includes('@')) {
       return Response.json({ error: 'Email invalide' }, { status: 400 })
     }
 
-    // Validation rôle (doit être dans l'ENUM role_type)
+    // Validation rôle
     const validRoles = ['admin_dev', 'qhse_manager', 'qh_auditor', 'safety_auditor', 'viewer']
     if (!validRoles.includes(role)) {
       return Response.json({ error: 'Rôle invalide' }, { status: 400 })
     }
 
-    // 4. Créer l'utilisateur dans Supabase Auth
+    // 5. Créer l'utilisateur avec client Admin
+    const supabaseAdmin = createSupabaseAdminClient()
+    
     const { data: authData, error: createAuthError } = await supabaseAdmin.auth.admin.createUser({
       email,
-      password: 'Test1234!', // Mot de passe par défaut (à changer au premier login)
-      email_confirm: true, // Auto-confirme l'email (pas d'email d'invitation)
+      password: 'Test1234!',
+      email_confirm: true,
       user_metadata: {
         first_name,
         last_name
@@ -160,7 +90,7 @@ export async function POST(request) {
       }, { status: 400 })
     }
 
-    // 5. Créer le profil dans la table profiles
+    // 6. Créer le profil
     const { error: createProfileError } = await supabaseAdmin
       .from('profiles')
       .insert({
@@ -170,13 +100,11 @@ export async function POST(request) {
         last_name,
         role,
         status: 'active',
-        is_jetc_admin: false // Par défaut, pas JETC admin
+        is_jetc_admin: false
       })
 
     if (createProfileError) {
       console.error('Erreur création profile:', createProfileError)
-      
-      // Rollback: supprimer l'utilisateur Auth créé
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
       
       return Response.json({ 
@@ -184,7 +112,7 @@ export async function POST(request) {
       }, { status: 400 })
     }
 
-    // 6. Retourner succès
+    // 7. Retourner succès
     return Response.json({
       success: true,
       user: {
@@ -212,38 +140,13 @@ export async function GET(request) {
   try {
     console.log('🚀 API GET /api/admin/users - DÉBUT')
     
-    // 0. Vérifier configuration
-    if (!supabaseAdmin || !supabase) {
-      console.error('❌ Supabase non configuré')
-      return Response.json({ 
-        error: 'Service non configuré (variables env manquantes)' 
-      }, { status: 500 })
-    }
+    // 1. Créer client Supabase avec cookies (session serveur)
+    const supabase = createSupabaseServerClient()
     
-    console.log('✅ Supabase configuré')
-
-    // 1. Vérifier authentification
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader) {
-      console.error('❌ Pas de header Authorization')
-      return Response.json({ error: 'Non authentifié' }, { status: 401 })
-    }
-
-    const token = authHeader.replace('Bearer ', '')
+    // 2. Récupérer la session utilisateur depuis les cookies
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    // ✅ Créer client Supabase AUTHENTIFIÉ avec le token utilisateur
-    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    })
-    
-    const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
-    
-    console.log('🔐 API GET /api/admin/users - Auth:', {
-      hasAuthHeader: !!authHeader,
+    console.log('🔐 API GET /api/admin/users - Session:', {
       hasUser: !!user,
       userId: user?.id,
       userEmail: user?.email,
@@ -251,50 +154,43 @@ export async function GET(request) {
     })
     
     if (authError || !user) {
-      return Response.json({ error: 'Token invalide' }, { status: 401 })
+      console.error('❌ Pas de session valide')
+      return Response.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
-    // 2. Vérifier que l'utilisateur est JETC admin (LIRE AVEC SON TOKEN)
-    // ✅ Utiliser supabaseUser (avec token) pour lire SON propre profil (RLS OK)
-    const { data: profile, error: profileError } = await supabaseUser
+    // 3. Vérifier le profil de l'utilisateur connecté
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('id, email, status, is_jetc_admin')
       .eq('id', user.id)
       .single()
 
-    // 🔍 LOG DIAGNOSTIQUE: Voir profil brut AVANT validation
-    console.log('🔍 API GET /api/admin/users - PROFIL RAW:', {
+    console.log('🔍 API GET /api/admin/users - PROFIL:', {
       profile: profile,
-      profileError: profileError,
-      hasProfile: !!profile,
-      profileStatus: profile?.status,
-      isJetcAdmin: profile?.is_jetc_admin
+      profileError: profileError
     })
 
-    // ❗ Vérification 1: profil existe (409 SEULEMENT si vraiment absent)
+    // Vérifications
     if (!profile) {
-      console.error('❌ API GET: Profil ABSENT pour user', user.id)
+      console.error('❌ Profil ABSENT pour user', user.id)
       return Response.json({ 
         error: 'Profil non initialisé - Contactez un administrateur' 
       }, { status: 409 })
     }
 
-    // Si profileError mais profile existe, log warning mais continue
     if (profileError) {
-      console.warn('⚠️ API GET: profileError mais profil existe:', profileError.message)
+      console.warn('⚠️ profileError mais profil existe:', profileError.message)
     }
 
-    // ✅ Vérification 2: statut actif
     if (profile.status !== 'active') {
-      console.error('❌ API GET: Compte désactivé:', profile.email, 'status=', profile.status)
+      console.error('❌ Compte désactivé:', profile.email)
       return Response.json({ 
         error: 'Compte désactivé - Contactez un administrateur' 
       }, { status: 403 })
     }
 
-    // ✅ Vérification 3: flag JETC admin
     if (profile.is_jetc_admin !== true) {
-      console.error('❌ API GET: Pas JETC admin:', profile.email, 'is_jetc_admin=', profile.is_jetc_admin)
+      console.error('❌ Pas JETC admin:', profile.email)
       return Response.json({ 
         error: 'Accès refusé: réservé aux administrateurs JETC Solution' 
       }, { status: 403 })
@@ -302,21 +198,19 @@ export async function GET(request) {
 
     console.log('✅ API GET /api/admin/users - Autorisé:', user.email)
 
-    // 3. Récupérer tous les utilisateurs
-    console.log('🔍 Tentative récupération liste users avec supabaseAdmin...')
+    // 4. Récupérer tous les utilisateurs avec client Admin
+    console.log('🔍 Récupération liste users avec service_role...')
+    const supabaseAdmin = createSupabaseAdminClient()
     
-    // ✅ Sélectionner SEULEMENT les champs nécessaires (pas *)
     const { data: users, error: usersError } = await supabaseAdmin
       .from('profiles')
       .select('id, email, first_name, last_name, role, status, is_jetc_admin, created_at, updated_at')
       .order('created_at', { ascending: false })
 
-    console.log('🔍 Résultat requête users:', {
+    console.log('🔍 Résultat:', {
       usersCount: users?.length || 0,
       hasError: !!usersError,
-      errorMessage: usersError?.message,
-      errorCode: usersError?.code,
-      errorDetails: usersError?.details
+      errorMessage: usersError?.message
     })
 
     if (usersError) {
