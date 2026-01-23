@@ -504,11 +504,11 @@ export default function AuditQuestionsPage({ params }) {
                   <div>
                     <h3 className="font-semibold">Audit planifié</h3>
                     <p className="text-sm text-muted-foreground">
-                      Cliquez sur "Démarrer" pour commencer l'audit
+                      Cliquez sur &quot;Démarrer&quot; pour commencer l&apos;audit
                     </p>
                   </div>
                   <Button onClick={handleStartAudit} disabled={saving}>
-                    Démarrer l'audit
+                    Démarrer l&apos;audit
                   </Button>
                 </div>
               </CardContent>
@@ -580,7 +580,7 @@ export default function AuditQuestionsPage({ params }) {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold">Terminer l'audit</h3>
+                    <h3 className="font-semibold">Terminer l&apos;audit</h3>
                     <p className="text-sm text-muted-foreground">
                       {progress.percentage === 100 
                         ? 'Toutes les questions ont été répondues'
@@ -593,7 +593,7 @@ export default function AuditQuestionsPage({ params }) {
                     disabled={saving || progress.percentage < 100}
                   >
                     <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Terminer l'audit
+                    Terminer l&apos;audit
                   </Button>
                 </div>
               </CardContent>

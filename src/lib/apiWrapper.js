@@ -21,13 +21,13 @@
  * - api.stats.*
  */
 
-import { DEMO_MODE } from '@/config/demoConfig';
+import { DEMO_MODE } from '@/src/config/demoConfig';
 
 // Import conditionnel selon mode
 let mockApi;
 
 if (DEMO_MODE) {
-  const mockDataModule = require('@/data/mockData');
+  const mockDataModule = require('@/src/data/mockData');
   mockApi = mockDataModule.default;
 }
 

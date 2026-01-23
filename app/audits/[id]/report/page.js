@@ -387,7 +387,7 @@ export default function AuditReportPage({ params }) {
           {report.audit.statut !== 'termine' && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
-              Ce rapport est provisoire. L'audit n'est pas encore terminé.
+              Ce rapport est provisoire. L&apos;audit n&apos;est pas encore terminé.
             </Alert>
           )}
         </div>
