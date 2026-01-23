@@ -670,7 +670,164 @@ const mockApi = {
   getNonConformities: () => Promise.resolve(mockNonConformities),
   getNonConformityById: (id) => Promise.resolve(mockNonConformities.find(nc => nc.id === id)),
   
-  // Dashboard
+  // Dashboard - 7 fonctions SQL Étape 04
+  dashboard: {
+    // KPI 1: Nombre audits terminés sur période
+    getAuditsCompleted: (periodDays = 30) => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+      const count = mockAudits.filter(a => 
+        a.status === 'termine' && 
+        a.completedAt && 
+        new Date(a.completedAt) >= cutoffDate
+      ).length;
+      return Promise.resolve(count);
+    },
+
+    // KPI 2: Taux de conformité global
+    calculateConformityRate: (periodDays = 30) => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+      const relevantResponses = mockResponses.filter(r => {
+        const audit = mockAudits.find(a => a.id === r.auditId);
+        return audit && audit.completedAt && new Date(audit.completedAt) >= cutoffDate;
+      });
+      
+      if (relevantResponses.length === 0) return Promise.resolve(0);
+      
+      const conformCount = relevantResponses.filter(r => r.isCompliant).length;
+      const rate = ((conformCount / relevantResponses.length) * 100).toFixed(1);
+      return Promise.resolve(parseFloat(rate));
+    },
+
+    // KPI 3: Répartition audits par statut (pour donut chart)
+    getAuditsByStatus: (depotId = null, zoneId = null, periodDays = 30) => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+      
+      let filtered = mockAudits.filter(a => {
+        const dateCheck = a.createdAt && new Date(a.createdAt) >= cutoffDate;
+        const depotCheck = !depotId || a.depotId === depotId;
+        const zoneCheck = !zoneId || a.zoneId === zoneId;
+        return dateCheck && depotCheck && zoneCheck;
+      });
+
+      const statusCounts = {
+        planifie: filtered.filter(a => a.status === 'planifie').length,
+        en_cours: filtered.filter(a => a.status === 'en_cours').length,
+        termine: filtered.filter(a => a.status === 'termine').length,
+        annule: filtered.filter(a => a.status === 'annule').length,
+      };
+
+      return Promise.resolve(statusCounts);
+    },
+
+    // KPI 4: NC par gravité (pour bar chart)
+    getNCByGravity: (depotId = null, periodDays = 30) => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+      
+      let filtered = mockNonConformities.filter(nc => {
+        const dateCheck = nc.createdAt && new Date(nc.createdAt) >= cutoffDate;
+        const depotCheck = !depotId || nc.depotId === depotId;
+        return dateCheck && depotCheck;
+      });
+
+      const gravityCounts = {
+        critique: filtered.filter(nc => nc.gravite === 'critique').length,
+        haute: filtered.filter(nc => nc.gravite === 'haute').length,
+        moyenne: filtered.filter(nc => nc.gravite === 'moyenne').length,
+        faible: filtered.filter(nc => nc.gravite === 'faible').length,
+      };
+
+      return Promise.resolve(gravityCounts);
+    },
+
+    // KPI 5: Historique 6 mois audits terminés (pour line chart)
+    getAuditsHistory6Months: () => {
+      const history = [];
+      const now = new Date();
+      
+      for (let i = 5; i >= 0; i--) {
+        const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0);
+        
+        const count = mockAudits.filter(a => {
+          if (a.status !== 'termine' || !a.completedAt) return false;
+          const completedDate = new Date(a.completedAt);
+          return completedDate >= monthDate && completedDate <= monthEnd;
+        }).length;
+
+        history.push({
+          month: monthDate.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' }),
+          count: count,
+        });
+      }
+
+      return Promise.resolve(history);
+    },
+
+    // KPI 6: Top 5 dépôts conformité (optionnel)
+    getTop5DepotsConformity: (periodDays = 30) => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+      
+      const depotStats = mockDepots.map(depot => {
+        const depotAudits = mockAudits.filter(a => 
+          a.depotId === depot.id && 
+          a.status === 'termine' &&
+          a.completedAt &&
+          new Date(a.completedAt) >= cutoffDate
+        );
+
+        const responses = mockResponses.filter(r => 
+          depotAudits.some(a => a.id === r.auditId)
+        );
+
+        const conformCount = responses.filter(r => r.isCompliant).length;
+        const rate = responses.length > 0 
+          ? ((conformCount / responses.length) * 100).toFixed(1) 
+          : 0;
+
+        return {
+          depotName: depot.name,
+          rate: parseFloat(rate),
+          auditsCount: depotAudits.length,
+        };
+      })
+      .sort((a, b) => b.rate - a.rate)
+      .slice(0, 5);
+
+      return Promise.resolve(depotStats);
+    },
+
+    // KPI 7: Top 5 zones NC critiques (optionnel)
+    getTop5ZonesCriticalNC: (periodDays = 30) => {
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - periodDays);
+      
+      const zoneStats = mockZones.map(zone => {
+        const criticalNC = mockNonConformities.filter(nc => 
+          nc.zoneId === zone.id &&
+          nc.gravite === 'critique' &&
+          nc.createdAt &&
+          new Date(nc.createdAt) >= cutoffDate
+        );
+
+        return {
+          zoneName: `${zone.name} (${zone.code})`,
+          count: criticalNC.length,
+        };
+      })
+      .filter(z => z.count > 0)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+      return Promise.resolve(zoneStats);
+    },
+  },
+  
+  // Stats simplifiées (legacy, kept for compatibility)
   getDashboardStats: () => Promise.resolve(calculateDashboardStats()),
 };
 
