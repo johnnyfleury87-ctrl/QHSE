@@ -210,16 +210,22 @@ export async function POST(request) {
  */
 export async function GET(request) {
   try {
+    console.log('🚀 API GET /api/admin/users - DÉBUT')
+    
     // 0. Vérifier configuration
     if (!supabaseAdmin || !supabase) {
+      console.error('❌ Supabase non configuré')
       return Response.json({ 
         error: 'Service non configuré (variables env manquantes)' 
       }, { status: 500 })
     }
+    
+    console.log('✅ Supabase configuré')
 
     // 1. Vérifier authentification
     const authHeader = request.headers.get('authorization')
     if (!authHeader) {
+      console.error('❌ Pas de header Authorization')
       return Response.json({ error: 'Non authentifié' }, { status: 401 })
     }
 
@@ -297,19 +303,31 @@ export async function GET(request) {
     console.log('✅ API GET /api/admin/users - Autorisé:', user.email)
 
     // 3. Récupérer tous les utilisateurs
+    console.log('🔍 Tentative récupération liste users avec supabaseAdmin...')
+    
+    // ✅ Sélectionner SEULEMENT les champs nécessaires (pas *)
     const { data: users, error: usersError } = await supabaseAdmin
       .from('profiles')
-      .select('*')
+      .select('id, email, first_name, last_name, role, status, is_jetc_admin, created_at, updated_at')
       .order('created_at', { ascending: false })
 
+    console.log('🔍 Résultat requête users:', {
+      usersCount: users?.length || 0,
+      hasError: !!usersError,
+      errorMessage: usersError?.message,
+      errorCode: usersError?.code,
+      errorDetails: usersError?.details
+    })
+
     if (usersError) {
-      console.error('Erreur récupération users:', usersError)
+      console.error('❌ Erreur récupération users:', usersError)
       return Response.json({ 
         error: `Erreur récupération utilisateurs: ${usersError.message}` 
       }, { status: 400 })
     }
 
-    return Response.json({ users })
+    console.log('✅ Liste users récupérée:', users?.length || 0, 'utilisateurs')
+    return Response.json({ users: users || [] })
 
   } catch (error) {
     console.error('Erreur API get users:', error)
