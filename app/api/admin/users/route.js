@@ -6,11 +6,24 @@
  */
 
 import { createSupabaseServerClient, createSupabaseAdminClient } from '@/lib/supabase-server'
+import { cookies } from 'next/headers'
+
+// ⚠️ CRITICAL: Forcer dynamic rendering (sinon Next peut optimiser et vider les cookies)
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 /**
  * POST: Créer un nouvel utilisateur
  */
 export async function POST(request) {
+  // 🔍 DIAGNOSTIC ENV VARS (server-side uniquement, jamais côté client)
+  console.log('🔧 API POST /api/admin/users - ENV CHECK:', {
+    hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+    hasAnon: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    demoMode: process.env.NEXT_PUBLIC_DEMO_MODE,
+    runtime: process.env.NEXT_RUNTIME || 'nodejs'
+  })
   try {
     // 1. Créer client Supabase avec cookies (session serveur)
     const supabase = createSupabaseServerClient()
@@ -138,26 +151,26 @@ export async function POST(request) {
  */
 export async function GET(request) {
   try {
-    console.log('🚀 API GET /api/admin/users - DÉBUT')
+    // 🔧 DIAGNOSTIC ENV VARS (server-side uniquement, jamais côté client)
+    console.log('🔧 API GET /api/admin/users - ENV CHECK:', {
+      hasUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasAnon: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      demoMode: process.env.NEXT_PUBLIC_DEMO_MODE,
+      runtime: process.env.NEXT_RUNTIME || 'nodejs'
+    })
     
-    // 🔍 A) DIAGNOSTIC COOKIES
-    const { cookies } = await import('next/headers')
+    // 🔍 DIAGNOSTIC COOKIES
     const cookieStore = cookies()
     const allCookies = cookieStore.getAll()
     const cookieNames = allCookies.map(c => c.name)
-    const hasAccessToken = cookieNames.some(name => name.includes('access') || name.includes('auth'))
-    const hasRefreshToken = cookieNames.some(name => name.includes('refresh'))
+    const subaseCookies = cookieNames.filter(name => name.startsWith('sb-'))
     
     console.log('🍪 DIAGNOSTIC COOKIES:', {
       totalCookies: cookieNames.length,
-      cookieNames: cookieNames,
-      hasAccessToken,
-      hasRefreshToken,
-      envCheck: {
-        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-        hasAnonKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-        hasServiceRole: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-      }
+      supabaseCookies: subaseCookies.length,
+      supabaseCookieNames: subaseCookies, // Noms uniquement, pas les valeurs
+      hasSupabaseCookies: subaseCookies.length > 0
     })
     
     // 1. Créer client Supabase avec cookies (session serveur)
@@ -167,23 +180,23 @@ export async function GET(request) {
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     
-    console.log('🔐 API GET /api/admin/users - Session:', {
+    console.log('🔐 SESSION RESULT:', {
       hasSession: !!sessionData?.session,
-      sessionError: sessionError?.message,
+      sessionError: sessionError?.message || null,
       hasUser: !!user,
-      userId: user?.id,
-      userEmail: user?.email,
-      authError: authError?.message
+      userId: user?.id || null,
+      userEmail: user?.email || null,
+      authError: authError?.message || null
     })
     
     if (authError || !user) {
-      console.error('❌ Pas de session valide')
+      console.error('❌ PAS DE SESSION VALIDE - 401')
       return Response.json({ 
         error: 'Non authentifié',
         debug: {
           hasSession: !!sessionData?.session,
-          cookiesCount: cookieNames.length,
-          hasTokens: hasAccessToken && hasRefreshToken
+          supabaseCookiesCount: subaseCookies.length,
+          hasSupabaseCookies: subaseCookies.length > 0
         }
       }, { status: 401 })
     }
