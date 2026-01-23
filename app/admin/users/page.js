@@ -41,13 +41,42 @@ export default function AdminUsersPage() {
     })
   }, [user, loading, error, users, filteredUsers, showCreateModal])
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
+  // ✅ Déclaration AVANT utilisation (évite TDZ)
+  const filterUsers = useCallback(() => {
+    let filtered = [...users]
 
+    // Filtre par recherche (email, nom, prénom)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (u) =>
+          u.email.toLowerCase().includes(query) ||
+          u.first_name.toLowerCase().includes(query) ||
+          u.last_name.toLowerCase().includes(query)
+      )
+    }
+
+    // Filtre par rôle
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter((u) => u.role === roleFilter)
+    }
+
+    // Filtre par statut
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter((u) => u.status === statusFilter)
+    }
+
+    setFilteredUsers(filtered)
+  }, [users, searchQuery, roleFilter, statusFilter])
+
+  // ✅ useEffect APRÈS déclaration de filterUsers
   useEffect(() => {
     filterUsers()
   }, [filterUsers])
+
+  useEffect(() => {
+    loadUsers()
+  }, [])
 
   const loadUsers = async () => {
     try {
@@ -85,33 +114,6 @@ export default function AdminUsersPage() {
       setLoading(false)
     }
   }
-
-  const filterUsers = useCallback(() => {
-    let filtered = [...users]
-
-    // Filtre par recherche (email, nom, prénom)
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(
-        (u) =>
-          u.email.toLowerCase().includes(query) ||
-          u.first_name.toLowerCase().includes(query) ||
-          u.last_name.toLowerCase().includes(query)
-      )
-    }
-
-    // Filtre par rôle
-    if (roleFilter !== 'all') {
-      filtered = filtered.filter((u) => u.role === roleFilter)
-    }
-
-    // Filtre par statut
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter((u) => u.status === statusFilter)
-    }
-
-    setFilteredUsers(filtered)
-  }, [users, searchQuery, roleFilter, statusFilter])
 
   const getRoleBadgeVariant = (role) => {
     switch (role) {

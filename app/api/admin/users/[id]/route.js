@@ -7,28 +7,35 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+// ✅ Vérification variables env (évite crash build)
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+
 // Client Supabase avec service_role key (server-side uniquement)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
+const supabaseAdmin = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : null
 
 // Client Supabase normal (pour vérification session)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-)
+const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null
 
 /**
  * Helper: Vérifier authentification et permissions JETC admin
  */
 async function verifyJETCAdmin(request) {
+  // 0. Vérifier configuration
+  if (!supabaseAdmin || !supabase) {
+    return { error: 'Service non configuré (variables env manquantes)', status: 500 }
+  }
+
   const authHeader = request.headers.get('authorization')
   if (!authHeader) {
     return { error: 'Non authentifié', status: 401 }
